@@ -35,3 +35,12 @@ Remix routes are files that define:
 
 - Node related imports are generally found in the `@remix-run/node` package
 - React related imports are generally found in the `@remix-run/react` package.
+
+## Nested Routes
+
+- Remix nests routes similarly to how SvelteKit does: by using nested directories.
+- We need to tell remix where to display nested routes using `<Outlet />` component
+
+## Links
+
+Remix is built on top of React Router, so Link components are the same Link components that you use in React Router.
