@@ -9,6 +9,7 @@ import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 
 startTransition(() => {
+  // Hydration takes the generated server-side markup and attaches React's event listeners to it
   hydrateRoot(
     document,
     <StrictMode>
