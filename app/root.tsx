@@ -1,6 +1,5 @@
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import {
-  Link,
   Links,
   LiveReload,
   Meta,
@@ -8,6 +7,13 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
+import {
+  HomeIcon,
+  DiscoverIcon,
+  RecipeBookIcon,
+  SettingsIcon,
+} from "./components/icons";
+import { AppNavLink } from "./components/appNavLink";
 import tailwindStyles from "./tailwind.css";
 
 export const links: LinksFunction = () => [
@@ -33,13 +39,24 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="discover">Discover</Link>
-          <Link to="app">App</Link>
-          <Link to="settings">Settings</Link>
+      <body className="md:flex md:h-screen">
+        <nav className="bg-primary text-white">
+          <ul className="flex md:flex-col">
+            <AppNavLink to="/">
+              <HomeIcon />
+            </AppNavLink>
+            <AppNavLink to="discover">
+              <DiscoverIcon />
+            </AppNavLink>
+            <AppNavLink to="app">
+              <RecipeBookIcon />
+            </AppNavLink>
+            <AppNavLink to="settings">
+              <SettingsIcon />
+            </AppNavLink>
+          </ul>
         </nav>
+        <div className="p-4" />
         <Outlet />
         {/* emulates browser scroll restoration behavior */}
         <ScrollRestoration />
