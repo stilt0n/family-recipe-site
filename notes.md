@@ -100,3 +100,204 @@ export const links: LinksFunction = () => {
 ```
 
 In this app we're going to make use of Tailwind to handle styles.
+
+## Loaders
+
+In remix, when you want to get data from an outside source
+you do it with a `loader` export inside of a route file.
+
+Loaders can return any JSON serializable data
+
+Example:
+
+```jsx
+import { LoaderFunction } from '@remix-run/node';
+import { useLoaderData } from '@remix-run/react';
+
+export const loader: LoaderFunction = () => {
+  return { message: 'Hello, World!' };
+}
+
+const Component = () => {
+  const data = useLoaderData<{ message: string }>();
+  return <p>{data.message}</p>;
+}
+```
+
+If you look in the network tab, you'll see that the loader message is in the document that gets sent. That is because the data is loaded on the server-side.
+
+Loader is only included on the server so it can do stuff like interface with a database or read secret tokens.
+
+We can send response objects from the loader:
+
+```js
+export const loader: LoaderFunction = () => {
+  return new Response(JSON.stringify({message: 'Hello, World!'}), {
+    headers: "Content-Type": "application/json",
+  })
+}
+```
+
+Remix has a `json` helper that simplifies the above
+
+## Pending Data
+
+When data is loading, how to show an indicator?
+
+- Remix waits till your data loads to transition to a new route
+- This can be a confusing user experience
+- Can't add pending state to component
+- Need to go up a level
+
+### Let browser take care of it
+
+```jsx
+// Tells Remix to reload full page, in which case browser handles pending UI
+<NavLink to={to} reloadDocument />
+```
+
+### Build custom pending UI
+
+Use the `useNavigation()` hook.
+
+`useNavigation` gives you information about your route's navigation.
+
+Can use it to determine if remix is loading a page associated with link:
+
+```jsx
+const Example = ({ children, to }) => {
+  const navigation = useNavigation();
+  const resolvedPath = useResolvedPath(to);
+  const isLoading =
+    navigation.state === 'loading' &&
+    navigation.location.pathname === resolvedPath.pathname;
+  return (
+    <NavLink to={to} >
+      <div className={isLoading ? "animate-pulse bg-primary-light" : ""}>
+        {children}
+      </div>
+    <NavLink />
+  )
+}
+
+```
+
+Could obviously extract this into a hook:
+
+```js
+const useIsLoading = (route: string) => {
+  const resolvedPath = useResolvedPath();
+  const navigation = useNavigation();
+  return (
+    navigation.state === "loading" &&
+    navigation.location.pathname === resolvedPath.pathname
+  );
+};
+
+// in other file
+const Example = ({ to }) => {
+  const isLoading = useIsLoading();
+  // ...
+};
+```
+
+### Why load before route transition?
+
+- Remixes all data _before_ component loads
+- Transitions after all the data is in
+
+Good because:
+
+- non-blocking to the user. User can continue to use current content
+- Separation of concerns between UI and data. Makes fetching data not a concern of React component
+- Good for performance. Avoids stuff like fetch waterfalls
+
+Fetch waterfall example:
+
+```jsx
+const Bar = () => {
+  const bar = useLoadBar();
+  if (bar.isLoading) {
+    return <Spinner />;
+  }
+
+  return <Foo bar={bar} />;
+};
+
+// Can't start fetching until Bar is done fetching
+// Especially bad if Foo does not depend on Bar
+const Foo = (props) => {
+  const foo = useLoadFoo(props.bar);
+  if (foo.isLoading) {
+    return <Spinner />;
+  }
+
+  return (
+    <>
+      {foo.data.map((f) => (
+        <p>{f}</p>
+      ))}
+    </>
+  );
+};
+```
+
+Remix can fetch all this data at once
+
+### useLoaderData
+
+Use loader data provides data through context, so when you call it inside of a component you will get data from
+the closest route above your component.
+
+If the route above the component does NOT have loader data, the component will NOT look above that component.
+
+Remix has a hook called `useMatches`:
+
+```js
+// This gives you a list of all routes that match the current page
+const matches = useMatches();
+// Can then get data from a match
+matches[0].data;
+// This also allows grabbing child data from parent route
+matches.find((route) => route.id === "parent/child").data;
+```
+
+In a hook:
+
+```js
+const useMatchesData(id: string) => {
+  const matches = useMatches();
+  const route = useMemo(() => {
+    matches.find(route => route.id === id),
+    [matches, id]
+  });
+  return route?.data;
+}
+```
+
+## Error handling in remix
+
+To create custom error UI export an ErrorBoundary component
+
+```jsx
+export const ErrorBoundary = () => {
+  return <h1>Whoops!</h1>;
+};
+```
+
+Can also do this:
+
+```jsx
+export const ErrorBoundary = () => {
+  const routeError = useRouteError();
+  if (routeError instanceof Error) {
+    return (
+      <div>
+        <h1>Whoops! Something went wrong!</h1>
+        <p>{error.message}</p>
+      </div>
+    );
+  }
+  return <div>Unexpected error!</div>;
+};
+```
