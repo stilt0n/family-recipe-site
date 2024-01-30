@@ -330,3 +330,11 @@ export const loader: LoaderFunction = () => {
   return redirect(redirectUrl);
 };
 ```
+
+### Prisma Studio
+
+For prisma if you want a GUI you can use
+
+```sh
+npx prisma studio
+```
