@@ -301,3 +301,32 @@ export const ErrorBoundary = () => {
   return <div>Unexpected error!</div>;
 };
 ```
+
+## Resource routes
+
+In remix, a route that doesn't display a UI is called a resource route.
+
+Resource routes can be used to do stuff like reroute users, or provider resources like json, images, etc.
+
+To redirect we return a response with status 302 which is for redirect and a Location header:
+
+```js
+return new Response(null, {
+  status: 302,
+  headers: {
+    Location: redirectUrl,
+  },
+});
+```
+
+Remix has a redirect helper that accomplishes the above, but I am not currently using it because I want to
+get more used to the web API:
+
+```js
+import { LoaderFunction, redirect } from "@remix-run/node";
+
+export const loader: LoaderFunction = () => {
+  // Shortcut for above
+  return redirect(redirectUrl);
+};
+```
