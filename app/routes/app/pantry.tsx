@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { getAllShelves } from "~/models/pantryShelf.sever";
+import { ShelfItems } from "~/components/shelfItems";
 import cn from "classnames";
 
 // Remix creates an API layer from the loader and that api layer gets called
@@ -31,13 +32,7 @@ const Pantry = () => {
             )}
           >
             <h1 className="text-2xl font-extrabold mb-2">{shelf.name}</h1>
-            <ul>
-              {shelf.items.map((item) => (
-                <li key={item.id} className="py-2">
-                  {item.name}
-                </li>
-              ))}
-            </ul>
+            <ShelfItems items={shelf.items} />
           </li>
         ))}
       </ul>
