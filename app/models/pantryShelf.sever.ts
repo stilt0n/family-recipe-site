@@ -15,5 +15,16 @@ export const getAllShelves = (query?: string | null) => {
         },
       },
     },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
+export const createShelf = (name: string) => {
+  return db.pantryShelf.create({
+    data: {
+      name,
+    },
   });
 };

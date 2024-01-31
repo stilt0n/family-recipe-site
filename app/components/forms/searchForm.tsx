@@ -1,5 +1,5 @@
 import { Form } from "@remix-run/react";
-import { SearchIcon } from "./icons";
+import { SearchIcon } from "../icons";
 import cn from "classnames";
 
 interface SearchFormProps {

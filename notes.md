@@ -398,3 +398,13 @@ Finally, this also means the search bar works without JS.
 
 Remix `Form` is similar to `form` but instead of doing whole page reloads it handles things client-side with javascript.
 It also allows custom pending UI with the `useTransition` hook.
+
+## actions
+
+Remix actions allow you to respond to non-GET requests that are directed to a route.
+
+Remix responds in this order:
+
+- Call action
+- Call associated loaders
+- Send back HTML
