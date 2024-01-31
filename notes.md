@@ -338,3 +338,63 @@ For prisma if you want a GUI you can use
 ```sh
 npx prisma studio
 ```
+
+## Working with form data
+
+Consider this form:
+
+```jsx
+<form>
+  <input type="text" name="firstName" className="border-2 border-gray-300" />
+  <input type="text" name="lastName" className="border-2 border-gray-300" />
+  <button>Submit</button>
+</form>
+```
+
+When Submit is clicked, the page will reload and the browser will send a request.
+
+The request goes to the current route `"http://mysite/current/route"` but with an
+added query string. In this case `"?firstName=<submittedValue>&lastName=<lastNameValue>"`
+
+The parts of the query string are called query parameters (I've used these before at work).
+
+The form submit causes the page to _navigate_ to the current page.
+
+A form can have a action prop:
+
+```html
+<form action="/app/pantry">
+  <button>Submit</button>
+</form>
+```
+
+That tells the form where to navigate to on submit.
+
+So forms can be seen as an anchor tag with query params
+
+When we navigate using the form, remix will call the loaders associated with the route.
+Remember that this includes parent routes (e.g. routes/app/pantry also includes routes/app and root)
+
+After data is gathered from loaders remix will pass the data to `handleRequest` in `entry.server.tsx`
+as `remixContext.routeData` which allows you to render the html
+
+The loader will get the request object passed to it. The request object will have a property called URL
+
+To use this with a loader, you need to use the `useSearchParams` hook in order to persist the url after reload.
+
+### More
+
+An interesting thing about this approach is that it allows us to use the url to manage state. This has a few benefits,
+one of them being that it makes it easy to share state between the server and the client.
+
+This also means we can do cool optimizations. For example, if we realize a lot of users search for something specific
+we can send cache control headers and cache the search result to avoid searching the database.
+
+This also allows the back and forward button to change search queries.
+
+Finally, this also means the search bar works without JS.
+
+## Remix Form
+
+Remix `Form` is similar to `form` but instead of doing whole page reloads it handles things client-side with javascript.
+It also allows custom pending UI with the `useTransition` hook.
