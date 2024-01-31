@@ -11,6 +11,7 @@ declare const global: CustomNodeJSGlobal;
 const db =
   (process.env.NODE_ENV === "development" && global.db) || new PrismaClient();
 
+// This helps prevent forming too many connections from hot-reloads during development
 if (process.env.NODE_ENV === "development") {
   global.db = db;
 }
