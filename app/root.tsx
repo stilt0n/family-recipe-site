@@ -1,11 +1,13 @@
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import {
+  Link,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteError,
 } from "@remix-run/react";
 import {
   HomeIcon,
@@ -68,3 +70,30 @@ export default function App() {
     </html>
   );
 }
+
+export const ErrorBoundary = () => {
+  const error = useRouteError();
+  return (
+    <html lang="en">
+      <head>
+        <title>Whoops!</title>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <div className="p-4">
+          <h1 className="text-2xl pb-3">Whoops! Something went wrong.</h1>
+          <p>You&apos;re seeing this because an unexpected error occurred.</p>
+          {error instanceof Error ? (
+            <p className="my-4 font-bold">{error.message}</p>
+          ) : null}
+          <Link to="/" className="text-primary">
+            Return to home page
+          </Link>
+        </div>
+      </body>
+    </html>
+  );
+};
