@@ -49,7 +49,6 @@ const Pantry = () => {
   // and it is doing it with form data that has "query"
   // then that means we triggered the navigation using the Form
   const isSearching = navigation.formData?.has("query");
-  const isCreatingShelf = navigation.formData?.get("_action") === "createShelf";
 
   return (
     <div>
@@ -57,7 +56,7 @@ const Pantry = () => {
         defaultValue={searchParams.get("query") ?? ""}
         isBusy={isSearching}
       />
-      <ShelfCreationForm isBusy={isCreatingShelf} />
+      <ShelfCreationForm />
       <ul
         className={cn(
           "flex gap-8 overflow-x-auto",
