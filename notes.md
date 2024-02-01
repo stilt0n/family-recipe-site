@@ -408,3 +408,35 @@ Remix responds in this order:
 - Call action
 - Call associated loaders
 - Send back HTML
+
+## useFetcher
+
+Remix form submissions act as navigations, so since you can only navigate to one page at a time, only one form can be submitted
+at a time. This can result in some weird behavior when using the `useNavigation` hook and submitting multiple forms at once.
+
+Requests will be processed after they are sent, but the UI's state can temporarily become inaccurate if it's using navigation
+form data to inform its rendering.
+
+So not all forms make much sense to treat as navigations, in this case. When we don't want to model a form as a navigation we
+can use the `useFetcher` hook. `useFetcher` allows you to submit a form on without navigating.
+
+Use fetcher returns a fetcher which does a few things:
+
+```js
+const Fetcher = useFetcher();
+```
+
+It has a Form component that submits requests without navigating:
+
+```js
+<Fetcher.Form />
+```
+
+And it also can be used as a stand-in for the `useNavigation` api:
+
+```js
+// Navigation API
+navigation.formData?.get("key");
+// Fetcher equivalent
+Fetcher.formData?.get("key");
+```

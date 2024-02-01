@@ -1,6 +1,5 @@
 import { ActionFunction, LoaderFunctionArgs, json } from "@remix-run/node";
 import {
-  Form,
   useLoaderData,
   useNavigation,
   useSearchParams,
@@ -10,11 +9,10 @@ import {
   deleteShelf,
   getAllShelves,
 } from "~/models/pantryShelf.sever";
-import { ShelfItems } from "~/components/shelfItems";
 import { SearchForm } from "~/components/forms/searchForm";
+import { ShelfCreationForm } from "~/components/forms/shelfCreationForm";
+import { PantryShelf } from "~/components/pantryShelf";
 import cn from "classnames";
-import { Button } from "../../components/forms/button";
-import { ShelfCreationForm } from "../../components/forms/shelfCreationForm";
 
 // Remix creates an API layer from the loader and that api layer gets called
 // when we fetch data from the component
@@ -67,36 +65,9 @@ const Pantry = () => {
           "mt-4 pb-4"
         )}
       >
-        {data.shelves.map((shelf) => {
-          const isDeletingShelf =
-            navigation.formData?.get("_action") === "deleteShelf" &&
-            navigation.formData?.get("shelfId") === shelf.id;
-          return (
-            <li
-              key={shelf.id}
-              className={cn(
-                "border-2 border-primary rounded-md p-4 h-fit",
-                "w-[calc(100vw-2rem)] flex-none snap-center",
-                "md:w-96"
-              )}
-            >
-              <h1 className="text-2xl font-extrabold mb-2">{shelf.name}</h1>
-              <ShelfItems items={shelf.items} />
-              <Form method="post" className="pt-8">
-                <input type="hidden" name="shelfId" value={shelf.id} />
-                <Button
-                  variant="delete"
-                  className="w-full"
-                  name="_action"
-                  value="deleteShelf"
-                  isBusy={isDeletingShelf}
-                >
-                  {isDeletingShelf ? "Deleting Shelf" : "Delete Shelf"}
-                </Button>
-              </Form>
-            </li>
-          );
-        })}
+        {data.shelves.map((shelf) => (
+          <PantryShelf key={shelf.id} shelf={shelf} />
+        ))}
       </ul>
     </div>
   );
