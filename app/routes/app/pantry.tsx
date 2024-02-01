@@ -4,6 +4,7 @@ import {
   useNavigation,
   useSearchParams,
 } from "@remix-run/react";
+import { z } from "zod";
 import {
   createShelf,
   deleteShelf,
@@ -14,8 +15,17 @@ import { SearchForm } from "~/components/forms/searchForm";
 import { ShelfCreationForm } from "~/components/forms/shelfCreationForm";
 import { PantryShelf } from "~/components/pantryShelf";
 import cn from "classnames";
+import { validateForm } from "../../utils/validation";
 
-type FieldErrors = { [key: string]: string };
+const saveShelfNameSchema = z.object({
+  shelfId: z.string(),
+  shelfName: z.string().min(1),
+});
+
+const deleteShelfSchema = z.object({
+  shelfId: z.string(),
+});
+
 // Remix creates an API layer from the loader and that api layer gets called
 // when we fetch data from the component
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -31,32 +41,20 @@ export const action: ActionFunction = async ({ request }) => {
   switch (formData.get("_action")) {
     case "createShelf":
       return createShelf("New Shelf");
-    case "deleteShelf": {
-      const shelfId = formData.get("shelfId");
-      if (typeof shelfId !== "string") {
-        return json({ errors: { shelfId: "Shelf ID must be type string" } });
-      }
-      return deleteShelf(shelfId);
-    }
-    case "saveShelfName": {
-      const shelfId = formData.get("shelfId");
-      const shelfName = formData.get("shelfName");
-      if (
-        typeof shelfId !== "string" ||
-        typeof shelfName !== "string" ||
-        shelfName === ""
-      ) {
-        const errors: FieldErrors = {};
-        if (typeof shelfId !== "string") {
-          errors.shelfId = "Shelf ID must be type string";
-        }
-        if (typeof shelfName !== "string" || shelfName === "") {
-          errors.shelfName = "Shelf Name must be a non-empty string";
-        }
-        return json({ errors });
-      }
-      return saveShelfName(shelfId, shelfName);
-    }
+    case "deleteShelf":
+      return validateForm(
+        formData,
+        deleteShelfSchema,
+        ({ shelfId }) => deleteShelf(shelfId),
+        (errors) => json({ errors })
+      );
+    case "saveShelfName":
+      return validateForm(
+        formData,
+        saveShelfNameSchema,
+        ({ shelfId, shelfName }) => saveShelfName(shelfId, shelfName),
+        (errors) => json({ errors })
+      );
     default:
       return null;
   }
