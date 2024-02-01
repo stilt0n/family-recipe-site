@@ -8,12 +8,14 @@ import {
   createShelf,
   deleteShelf,
   getAllShelves,
+  saveShelfName,
 } from "~/models/pantryShelf.sever";
 import { SearchForm } from "~/components/forms/searchForm";
 import { ShelfCreationForm } from "~/components/forms/shelfCreationForm";
 import { PantryShelf } from "~/components/pantryShelf";
 import cn from "classnames";
 
+type FieldErrors = { [key: string]: string };
 // Remix creates an API layer from the loader and that api layer gets called
 // when we fetch data from the component
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -35,6 +37,25 @@ export const action: ActionFunction = async ({ request }) => {
         return json({ errors: { shelfId: "Shelf ID must be type string" } });
       }
       return deleteShelf(shelfId);
+    }
+    case "saveShelfName": {
+      const shelfId = formData.get("shelfId");
+      const shelfName = formData.get("shelfName");
+      if (
+        typeof shelfId !== "string" ||
+        typeof shelfName !== "string" ||
+        shelfName === ""
+      ) {
+        const errors: FieldErrors = {};
+        if (typeof shelfId !== "string") {
+          errors.shelfId = "Shelf ID must be type string";
+        }
+        if (typeof shelfName !== "string" || shelfName === "") {
+          errors.shelfName = "Shelf Name must be a non-empty string";
+        }
+        return json({ errors });
+      }
+      return saveShelfName(shelfId, shelfName);
     }
     default:
       return null;

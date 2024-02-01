@@ -440,3 +440,46 @@ navigation.formData?.get("key");
 // Fetcher equivalent
 Fetcher.formData?.get("key");
 ```
+
+### Nice features of Remix
+
+When we submit a delete request (or create request) we are communicating to the database that we need to change the data there.
+
+Usually we'd need to then update the data to stay current with the database, but with Remix, Remix will assume that if it gets
+a request back that data could be out of date and rerun loaders. This means your page stays in synch with your database with
+minimal effort.
+
+Remix will also manage potential race condition bugs. Generally you're not guaranteed responses come back in order. Consider a
+case where we delete two shelves (X and Y). We'd expect the flow to look something like this:
+
+Send delete request for shelf X => Shelf X is deleted from database => backend sends back the updated list of shelves (includes shelf Y)
+Send delete request for shelf Y => Shelf Y is deleted from database => backend sends back the updated list of shelves (with both X and Y missing)
+
+But in practice, these steps may get mixed up. If we delete Shelf X and Shelf Y but the deltes happen _before_ the responses get sent back we could
+recieve the responses in the wrong order and wrongly see that one shelf is still present when it has been deleted.
+
+Remix handles this case by:
+
+- Noting that the request for shelf X happens first.
+- When a response comes back, if it is from the shelf X request:
+  - Update the UI with data from shelf X request
+  - UNLESS Remix has already recieved a response from shelf Y request
+    - In this case, cancel the shelf X request
+
+This request helps solve this particular issue:
+
+```
+X --> --> delete X --> --> return Shelves
+    Y --> delete Y --> return Shelves
+```
+
+But theres is still potential for a rarer issues:
+
+```
+X --> request cancelled / interrupted --> --> --> --> --> delete X (still happens because X has already been sent but will not return)
+    Y --> delete Y --> return Shelves
+```
+
+In practice this is rare but can be handled with backend logic if the use case is a concern in a particular circumstance.
+
+[See concurrency section in remix docs for more information](https://remix.run/docs/en/main/discussion/concurrency)
