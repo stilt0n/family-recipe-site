@@ -2,8 +2,9 @@ import { useFetcher } from "@remix-run/react";
 import { ShelfItems } from "./shelfItems";
 import { Button } from "./forms/button";
 import { SaveIcon } from "./icons";
-import cn from "classnames";
 import { FormError } from "./forms/formError";
+import cn from "classnames";
+import { FieldErrors } from "../utils/validation";
 
 type ShelfItem = {
   id: string;
@@ -23,6 +24,7 @@ interface PantryShelfProps {
 export const PantryShelf = ({ shelf }: PantryShelfProps) => {
   const DeleteShelfFetcher = useFetcher();
   const SaveShelfNameFetcher = useFetcher();
+  const CreateItemFetcher = useFetcher();
   const isDeletingShelf =
     DeleteShelfFetcher.formData?.get("_action") === "deleteShelf" &&
     DeleteShelfFetcher.formData?.get("shelfId") === shelf.id;
@@ -30,6 +32,10 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
   if (isDeletingShelf) {
     return null;
   }
+
+  const deleteErrors = getFetcherErrors(DeleteShelfFetcher);
+  const saveErrors = getFetcherErrors(SaveShelfNameFetcher);
+  const createItemErrors = getFetcherErrors(CreateItemFetcher);
 
   return (
     <li
@@ -45,30 +51,46 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
             type="text"
             className={cn(
               "text-2xl font-extrabold w-full outline-none",
-              "border-b-2 border-b-background focus:border-b-primary"
+              "border-b-2 border-b-background focus:border-b-primary",
+              saveErrors?.shelfName ? "border-b-red-600" : ""
             )}
             defaultValue={shelf.name}
             name="shelfName"
             placeholder="Shelf Name"
             autoComplete="off"
           />
-          <FormError className="pl-2">
-            {/* This could be avoided by using `useFetcher<typeof action>` but 
-            the action is in the parent component. So this will need to be
-            refactored to avoid this cast to `any` */}
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {(SaveShelfNameFetcher.data as any)?.errors?.shelfName}
-          </FormError>
+          <FormError className="pl-2">{saveErrors?.shelfName}</FormError>
         </div>
         <button name="_action" value="saveShelfName" className="ml-4">
           <SaveIcon />
         </button>
         <input type="hidden" name="shelfId" value={shelf.id} />
+        <FormError className="pb-2">{deleteErrors?.shelfId}</FormError>
+      </SaveShelfNameFetcher.Form>
+      <CreateItemFetcher.Form method="post" className="flex py-2">
+        <div className="w-full mb-2">
+          <input
+            type="text"
+            className={cn(
+              "w-full outline-none",
+              "border-b-2 border-b-background focus:border-b-primary",
+              createItemErrors?.shelfName ? "border-b-red-600" : ""
+            )}
+            name="itemName"
+            placeholder="New Item"
+            autoComplete="off"
+          />
+          <FormError className="pl-2">{createItemErrors?.itemName}</FormError>
+        </div>
+        <button name="_action" value="createShelfItem" className="ml-4">
+          <SaveIcon />
+        </button>
+        <input type="hidden" name="shelfId" value={shelf.id} />
         <FormError className="pb-2">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {(DeleteShelfFetcher.data as any)?.errors?.shelfId}
+          {createItemErrors?.shelfId}
         </FormError>
-      </SaveShelfNameFetcher.Form>
+      </CreateItemFetcher.Form>
       <ShelfItems items={shelf.items} />
       <DeleteShelfFetcher.Form method="post" className="pt-8">
         <input type="hidden" name="shelfId" value={shelf.id} />
@@ -83,4 +105,12 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
       </DeleteShelfFetcher.Form>
     </li>
   );
+};
+
+// This could be avoided by using `useFetcher<typeof action>` but
+// the action is in the parent component. So this will need to be
+// refactored to avoid this cast to `any`
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getFetcherErrors = (fetcher: any): FieldErrors | undefined => {
+  return fetcher?.data?.errors;
 };
