@@ -1,4 +1,4 @@
-import { ActionFunction, LoaderFunctionArgs, json } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs, json } from "@remix-run/node";
 import {
   useLoaderData,
   useNavigation,
@@ -19,7 +19,7 @@ import { validateForm } from "../../utils/validation";
 
 const saveShelfNameSchema = z.object({
   shelfId: z.string(),
-  shelfName: z.string().min(1),
+  shelfName: z.string().min(1, "Shelf name cannot be blank"),
 });
 
 const deleteShelfSchema = z.object({
@@ -36,7 +36,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({ shelves });
 };
 
-export const action: ActionFunction = async ({ request }) => {
+export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   switch (formData.get("_action")) {
     case "createShelf":
@@ -46,14 +46,14 @@ export const action: ActionFunction = async ({ request }) => {
         formData,
         deleteShelfSchema,
         ({ shelfId }) => deleteShelf(shelfId),
-        (errors) => json({ errors })
+        (errors) => json({ errors }, { status: 400 })
       );
     case "saveShelfName":
       return validateForm(
         formData,
         saveShelfNameSchema,
         ({ shelfId, shelfName }) => saveShelfName(shelfId, shelfName),
-        (errors) => json({ errors })
+        (errors) => json({ errors }, { status: 400 })
       );
     default:
       return null;

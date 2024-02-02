@@ -483,3 +483,17 @@ X --> request cancelled / interrupted --> --> --> --> --> delete X (still happen
 In practice this is rare but can be handled with backend logic if the use case is a concern in a particular circumstance.
 
 [See concurrency section in remix docs for more information](https://remix.run/docs/en/main/discussion/concurrency)
+
+## Optimistic UI
+
+In many cases, we have a good idea what the result of a request will be if it succeeds. In these cases, we may not want to show pending UI and may instead want to assume that the request succeeded and update the UI instantly.
+
+If we do this:
+
+- Form is submitted
+- UI is updated
+- When response is recieved:
+  - If it succeeded do nothing
+  - If it failed revert UI and show error message
+
+Usually step 3 is pretty tricky, but Remix will handle this for you. After recieving the response, Remix calls all the loaders. When it recieves the response from the loader, if the request failed, remixes revalidation will just return the old state.
