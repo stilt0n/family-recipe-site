@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { handleDelete } from "./utils";
 import db from "~/db.server";
 
 export const getAllShelves = (query?: string | null) => {
@@ -30,22 +30,14 @@ export const createShelf = (name: string) => {
   });
 };
 
-export const deleteShelf = async (shelfId: string) => {
-  try {
-    const result = await db.pantryShelf.delete({
+export const deleteShelf = (shelfId: string) => {
+  return handleDelete(() =>
+    db.pantryShelf.delete({
       where: {
         id: shelfId,
       },
-    });
-    return result;
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === "P2025") {
-        return error.message;
-      }
-    }
-    throw error;
-  }
+    })
+  );
 };
 
 export const saveShelfName = async (shelfId: string, newShelfName: string) => {

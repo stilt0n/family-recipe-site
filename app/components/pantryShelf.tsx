@@ -1,20 +1,15 @@
 import { useFetcher } from "@remix-run/react";
-import { ShelfItems } from "./shelfItems";
+import { ShelfItems, ShelfItemData } from "./shelfItems";
 import { Button } from "./forms/button";
 import { SaveIcon } from "./icons";
 import { FormError } from "./forms/formError";
+import { getFetcherErrors } from "~/utils/getFetcherErrors";
 import cn from "classnames";
-import { FieldErrors } from "../utils/validation";
-
-type ShelfItem = {
-  id: string;
-  name: string;
-};
 
 type Shelf = {
   id: string;
   name: string;
-  items: ShelfItem[];
+  items: ShelfItemData[];
 };
 
 interface PantryShelfProps {
@@ -105,12 +100,4 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
       </DeleteShelfFetcher.Form>
     </li>
   );
-};
-
-// This could be avoided by using `useFetcher<typeof action>` but
-// the action is in the parent component. So this will need to be
-// refactored to avoid this cast to `any`
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getFetcherErrors = (fetcher: any): FieldErrors | undefined => {
-  return fetcher?.data?.errors;
 };

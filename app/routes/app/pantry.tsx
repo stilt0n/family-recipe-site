@@ -14,8 +14,8 @@ import {
 import { SearchForm } from "~/components/forms/searchForm";
 import { ShelfCreationForm } from "~/components/forms/shelfCreationForm";
 import { PantryShelf } from "~/components/pantryShelf";
-import { validateForm } from "~/utils/validation";
-import { createShelfItem } from "~/models/pantryItem.server";
+import { FieldErrors, validateForm } from "~/utils/validation";
+import { createShelfItem, deleteShelfItem } from "~/models/pantryItem.server";
 import cn from "classnames";
 
 const saveShelfNameSchema = z.object({
@@ -31,6 +31,10 @@ const createShelfItemSchema = z.object({
   shelfId: z.string(),
   itemName: z.string().min(1, "Item name cannot be blank"),
 });
+
+const deleteShelfItemSchema = z.object({
+  itemId: z.string(),
+});
 // Remix creates an API layer from the loader and that api layer gets called
 // when we fetch data from the component
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -40,6 +44,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shelves = await getAllShelves(query);
   return json({ shelves });
 };
+
+const sendErrors = (errors: FieldErrors) => json({ errors }, { status: 400 });
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
@@ -51,21 +57,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         formData,
         deleteShelfSchema,
         ({ shelfId }) => deleteShelf(shelfId),
-        (errors) => json({ errors }, { status: 400 })
+        sendErrors
       );
     case "saveShelfName":
       return validateForm(
         formData,
         saveShelfNameSchema,
         ({ shelfId, shelfName }) => saveShelfName(shelfId, shelfName),
-        (errors) => json({ errors }, { status: 400 })
+        sendErrors
       );
     case "createShelfItem":
       return validateForm(
         formData,
         createShelfItemSchema,
         ({ shelfId, itemName }) => createShelfItem(shelfId, itemName),
-        (errors) => json({ errors }, { status: 400 })
+        sendErrors
+      );
+    case "deleteShelfItem":
+      return validateForm(
+        formData,
+        deleteShelfItemSchema,
+        ({ itemId }) => deleteShelfItem(itemId),
+        sendErrors
       );
     default:
       return null;
