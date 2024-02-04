@@ -30,7 +30,9 @@ interface ShelfItemProps {
 const ShelfItem = ({ shelfItem }: ShelfItemProps) => {
   const DeleteItemFetcher = useFetcher();
   const deleteItemErrors = getFetcherErrors(DeleteItemFetcher);
-  return (
+  // Form data is only defined when the request is in flight
+  const isDeletingItem = !!DeleteItemFetcher.formData;
+  return !isDeletingItem ? (
     <li className="py-2">
       <DeleteItemFetcher.Form method="post" className="flex">
         <p className="w-full">{shelfItem.name}</p>
@@ -43,5 +45,5 @@ const ShelfItem = ({ shelfItem }: ShelfItemProps) => {
         <FormError>{deleteItemErrors?.itemId}</FormError>
       </DeleteItemFetcher.Form>
     </li>
-  );
+  ) : null;
 };

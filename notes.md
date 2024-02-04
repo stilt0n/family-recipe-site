@@ -497,3 +497,13 @@ If we do this:
   - If it failed revert UI and show error message
 
 Usually step 3 is pretty tricky, but Remix will handle this for you. After recieving the response, Remix calls all the loaders. When it recieves the response from the loader, if the request failed, remixes revalidation will just return the old state.
+
+## Fetcher states
+
+Fetchers have three states:
+
+- Idle
+- Submitting
+- Loading
+
+Starts in idle. Submission triggers submitting state. Revalidation triggers loading state. When loading is finished goes back to idle.

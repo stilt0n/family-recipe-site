@@ -22,7 +22,10 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
   const DeleteShelfFetcher = useFetcher();
   const SaveShelfNameFetcher = useFetcher();
   const CreateItemFetcher = useFetcher();
-  const { renderedItems, addItem } = useOptimisticItems(shelf.items);
+  const { renderedItems, addItem } = useOptimisticItems(
+    shelf.items,
+    CreateItemFetcher.state
+  );
   const createItemFormRef = useRef<HTMLFormElement>(null);
   const isDeletingShelf =
     DeleteShelfFetcher.formData?.get("_action") === "deleteShelf" &&
@@ -129,7 +132,10 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
   );
 };
 
-const useOptimisticItems = (savedItems: ShelfItemData[]) => {
+const useOptimisticItems = (
+  savedItems: ShelfItemData[],
+  createShelfItemState: "idle" | "submitting" | "loading"
+) => {
   const [optimisticItems, setOptimisticItems] = useState<ShelfItemData[]>([]);
   const renderedItems = [...optimisticItems, ...savedItems];
   if (optimisticItems.length > 0) {
@@ -146,8 +152,10 @@ const useOptimisticItems = (savedItems: ShelfItemData[]) => {
   // is rendered to the screen, which means we'll get flickers when savedItems
   // is updated.
   useServerLayoutEffect(() => {
-    setOptimisticItems([]);
-  }, [savedItems]);
+    if (createShelfItemState === "idle") {
+      setOptimisticItems([]);
+    }
+  }, [createShelfItemState]);
 
   const addItem = (name: string) => {
     setOptimisticItems((items) => [
