@@ -1,5 +1,5 @@
 import { useMatches } from "@remix-run/react";
-import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 export const useMatchesData = (id: string) => {
   const matches = useMatches();
@@ -18,3 +18,16 @@ export const isRunningOnServer = () => {
 export const useServerLayoutEffect = isRunningOnServer()
   ? useEffect
   : useLayoutEffect;
+
+let hasHydrated = false;
+export const useIsHydrated = () => {
+  const [isHydrated, setIsHydrated] = useState(hasHydrated);
+  // useEffect does not run in the server render. Which means that if it runs
+  // the page must be hydrated. But since the effect will also be called after
+  // hydration and initially be false we need to keep track of this.
+  useEffect(() => {
+    setIsHydrated(true);
+    hasHydrated = true;
+  }, []);
+  return isHydrated;
+};

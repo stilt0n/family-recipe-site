@@ -5,8 +5,8 @@ import { Button } from "./forms/button";
 import { SaveIcon } from "./icons";
 import { FormError } from "./forms/formError";
 import { getFetcherErrors } from "~/utils/getFetcherErrors";
+import { useIsHydrated, useServerLayoutEffect } from "~/utils/misc";
 import cn from "classnames";
-import { useServerLayoutEffect } from "../utils/misc";
 
 type Shelf = {
   id: string;
@@ -22,6 +22,7 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
   const DeleteShelfFetcher = useFetcher();
   const SaveShelfNameFetcher = useFetcher();
   const CreateItemFetcher = useFetcher();
+  const isHydrated = useIsHydrated();
   const { renderedItems, addItem } = useOptimisticItems(
     shelf.items,
     CreateItemFetcher.state
@@ -48,7 +49,7 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
       )}
     >
       <SaveShelfNameFetcher.Form method="post" className="flex">
-        <div className="w-full mb-2">
+        <div className="w-full mb-2 peer">
           <input
             type="text"
             className={cn(
@@ -60,12 +61,37 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
             name="shelfName"
             placeholder="Shelf Name"
             autoComplete="off"
+            required
+            onChange={(event) => {
+              if (event.target.value === "") return;
+              SaveShelfNameFetcher.submit(
+                {
+                  _action: "saveShelfName",
+                  shelfName: event.target.value,
+                  shelfId: shelf.id,
+                },
+                { method: "post" }
+              );
+            }}
           />
           <FormError className="pl-2">{saveErrors?.shelfName}</FormError>
         </div>
-        <button name="_action" value="saveShelfName" className="ml-4">
-          <SaveIcon />
-        </button>
+        {!isHydrated ? (
+          // opacity-0 makes the button invisible by default which will prevent
+          // it from flickering. The other opacities allow it to be visible
+          // when the DOM is not yet hydrated and the button may be required to
+          // submit form data.
+          <button
+            name="_action"
+            value="saveShelfName"
+            className={cn(
+              "ml-4 opacity-0 hover:opacity-100 focus:opacity-100",
+              "peer-focus-within:opacity-100"
+            )}
+          >
+            <SaveIcon />
+          </button>
+        ) : null}
         <input type="hidden" name="shelfId" value={shelf.id} />
         <FormError className="pb-2">{deleteErrors?.shelfId}</FormError>
       </SaveShelfNameFetcher.Form>
@@ -93,7 +119,7 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
           createItemFormRef.current?.reset();
         }}
       >
-        <div className="w-full mb-2">
+        <div className="w-full mb-2 peer">
           <input
             type="text"
             className={cn(
@@ -104,12 +130,22 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
             name="itemName"
             placeholder="New Item"
             autoComplete="off"
+            required
           />
           <FormError className="pl-2">{createItemErrors?.itemName}</FormError>
         </div>
-        <button name="_action" value="createShelfItem" className="ml-4">
-          <SaveIcon />
-        </button>
+        {!isHydrated ? (
+          <button
+            name="_action"
+            value="createShelfItem"
+            className={cn(
+              "ml-4 opacity-0 hover:opacity-100 focus:opacity-100",
+              "peer-focus-within:opacity-100"
+            )}
+          >
+            <SaveIcon />
+          </button>
+        ) : null}
         <input type="hidden" name="shelfId" value={shelf.id} />
         <FormError className="pb-2">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -117,7 +153,15 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
         </FormError>
       </CreateItemFetcher.Form>
       <ShelfItems items={renderedItems} />
-      <DeleteShelfFetcher.Form method="post" className="pt-8">
+      <DeleteShelfFetcher.Form
+        method="post"
+        className="pt-8"
+        onSubmit={(event) => {
+          if (!window.confirm("Are you sure you want to delete this shelf?")) {
+            event.preventDefault();
+          }
+        }}
+      >
         <input type="hidden" name="shelfId" value={shelf.id} />
         <Button
           variant="delete"

@@ -507,3 +507,8 @@ Fetchers have three states:
 - Loading
 
 Starts in idle. Submission triggers submitting state. Revalidation triggers loading state. When loading is finished goes back to idle.
+
+## Client-Side vs Server-Side validation
+
+While things can be validated on the client side to improve user experience, it's important to keep in mind that requests don't come
+exclusively from the client. For this reason we always need to validate on the server even if we already did on the client.
