@@ -6,6 +6,7 @@ import { getFetcherErrors } from "~/utils/getFetcherErrors";
 export interface ShelfItemData {
   id: string;
   name: string;
+  isOptimistic?: boolean;
 }
 
 interface ShelfItemsProps {
@@ -33,9 +34,11 @@ const ShelfItem = ({ shelfItem }: ShelfItemProps) => {
     <li className="py-2">
       <DeleteItemFetcher.Form method="post" className="flex">
         <p className="w-full">{shelfItem.name}</p>
-        <button name="_action" value="deleteShelfItem">
-          <DeleteIcon />
-        </button>
+        {!shelfItem.isOptimistic ? (
+          <button name="_action" value="deleteShelfItem">
+            <DeleteIcon />
+          </button>
+        ) : null}
         <input type="hidden" name="itemId" value={shelfItem.id} />
         <FormError>{deleteItemErrors?.itemId}</FormError>
       </DeleteItemFetcher.Form>
