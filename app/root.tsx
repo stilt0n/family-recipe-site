@@ -14,8 +14,10 @@ import {
   DiscoverIcon,
   RecipeBookIcon,
   SettingsIcon,
+  LoginIcon,
 } from "./components/icons";
 import { AppNavLink } from "./components/appNavLink";
+import cn from "classnames";
 import tailwindStyles from "./tailwind.css";
 
 export const links: LinksFunction = () => [
@@ -42,7 +44,12 @@ export default function App() {
         <Links />
       </head>
       <body className="md:flex md:h-screen bg-background">
-        <nav className="bg-primary text-white">
+        <nav
+          className={cn(
+            "bg-primary text-white md:w-16",
+            "flex justify-between md:flex-col"
+          )}
+        >
           <ul className="flex md:flex-col">
             <AppNavLink to="/">
               <HomeIcon />
@@ -55,6 +62,11 @@ export default function App() {
             </AppNavLink>
             <AppNavLink to="settings">
               <SettingsIcon />
+            </AppNavLink>
+          </ul>
+          <ul>
+            <AppNavLink to="/login">
+              <LoginIcon />
             </AppNavLink>
           </ul>
         </nav>

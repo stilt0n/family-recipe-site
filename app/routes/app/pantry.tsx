@@ -14,7 +14,7 @@ import {
 import { SearchForm } from "~/components/forms/searchForm";
 import { ShelfCreationForm } from "~/components/forms/shelfCreationForm";
 import { PantryShelf } from "~/components/pantryShelf";
-import { FieldErrors, validateForm } from "~/utils/validation";
+import { validateForm, sendErrors } from "~/utils/validation";
 import { createShelfItem, deleteShelfItem } from "~/models/pantryItem.server";
 import cn from "classnames";
 
@@ -44,8 +44,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shelves = await getAllShelves(query);
   return json({ shelves });
 };
-
-const sendErrors = (errors: FieldErrors) => json({ errors }, { status: 400 });
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();

@@ -1,3 +1,4 @@
+import { json } from "@remix-run/node";
 import { z } from "zod";
 
 export type FieldErrors = { [key: string]: string };
@@ -19,3 +20,6 @@ export const validateForm = <T>(
   }
   return onSuccess(result.data);
 };
+
+export const sendErrors = (errors: FieldErrors) =>
+  json({ errors }, { status: 400 });
