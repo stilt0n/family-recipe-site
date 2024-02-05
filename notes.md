@@ -514,3 +514,337 @@ While things can be validated on the client side to improve user experience, it'
 exclusively from the client. For this reason we always need to validate on the server even if we already did on the client.
 
 # Notes on Authentication
+
+## Cookies and authentication
+
+Cookies are a fundamental building block of the web and necessary for our magic link authentication strategy.
+
+Cookies are a small amount of data that the server sends to the browser. The browsers stores this and sends it back on subsequent responses.
+
+Chain of events:
+
+Server -> "Set-Cookie": "name=value" -> Browser
+Browser -> "Cookie": "name=value" -> Server
+
+Cookies keep track of state on the web. Things cookies are commonly used for:
+
+- Determine which user made a request
+- Store user preferences
+- Record user behavior
+
+### Setting cookies with remix
+
+Remix lets you set cookies using the headers function export:
+
+```js
+export const headers = () => {
+  return {
+    "Set-Cookie": "remix-recipes-cookie=myValue",
+  };
+};
+```
+
+Note this isn't really Remix specific. Sending this header would set the cookie even without using JavaScript.
+
+### Cookie attributes
+
+Cookies have more than just a name attribute.
+Cookie attributes can be set through the header like this:
+
+```js
+"Set-Cookie": "name=value;attributeName=attributeValue;"
+```
+
+Some cookie attributes:
+
+- Name: value <- Only attributes that get sent back to the server. Uniquely identifies cookie
+- Domain: path <- determines which urls to send cookie to. Defaults to the url you sent cookie from.
+  - Can't set domain to anything other than domain of server
+  - Can't specifiy port number
+  - Subdomains are excluded by default but can be included by manually setting domain attribute
+  - Matches all sub paths (e.g. if path is `/app` then `/app/pantry` is included)
+- Expires/Max-Age <- Determines when cookie expires. If cookie expires browser will delete it and not send it.
+  - Can be set like this: `Expires=Wed, 5 Feb 2024 00:49:00 GMT`
+  - Or can set Max-Age to a number of seconds: `Max-Age=86400` <- Expires in one day
+  - Can be set to expire at the end of the current session: `Expires=Session`
+    - Default value for Expires/Max-Age
+    - Some browsers (e.g. Chrome) implement session restore which will restore this cookie
+    - This means this setting can potentially last forever
+- Size <- number of bytes in "name=value"
+  - Browser sets limits on size of cookies to 4096 bytes
+- Secure <- When Secure: true the browser will only send cookie over https
+- HttpOnly <- Makes cookie inaccessible to JavaScript
+- Same site <- Determines where the cookie can be sent from
+  - Strict <- Cookie can be sent from same site that set it
+  - Lax <- (default) Cookie can also be sent when navigating from another site to the site that sent the cookie
+  - None <- Cookie can be sent from any site as long as _Secure_ is set.
+
+We want both Secure and HttpOnly for the Auth cookie.
+
+### Basic Cookie Auth Flow
+
+_Important: this is for explanatory purposes and is not a secure way to handle auth_
+
+```js
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const cookieHeader = request.headers.get("cookie");
+  // browser sends all cookies associated with the domain
+  // so we need to parse the header to find the relevant one
+  findRelevantCookie(cookieHeader);
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const formData = await request.formData();
+  return validateForm(
+    formData,
+    loginSchema,
+    async ({ email }) => {
+      const user = await getUser(email);
+      if (user == null) {
+        return json(
+          { errors: { email: "User with this email does not exist" } },
+          { status: 401 }
+        );
+      }
+      return json(
+        { user },
+        {
+          headers: {
+            "Set-Cookie": `remix-recipes__userId=${user.id}; HttpOnly; Secure;`,
+          },
+        }
+      );
+    },
+    sendErrors
+  );
+};
+```
+
+### Remix cookie helper
+
+Can use the remix function `createCookie` to create cookies:
+
+```js
+const myCookie = createCookie("cookie_name", {
+  httpOnly: true,
+  secure: true,
+  ...cookieAttributes,
+});
+```
+
+To use it:
+
+```js
+{
+  headers: {
+    "Set-Cookie": await myCookie.serialize(myValue),
+  }
+}
+```
+
+To get cookie in loader:
+
+```js
+const loader = async ({ request }: LoaderFunctionArgs) => {
+  const cookieHeader = request.headers.get("cookie");
+  const cookieValue = await myCookie.parse(cookieHeader);
+  console.log(cookieValue); // this will be base64
+  return cookieValue;
+};
+```
+
+`cookie.serialize()`:
+
+- Calls JSON.stringify(value)
+- Encodes result with base64
+
+base64 encoding helps prevent cookie corruption from characters that can't be handled well by browsers.
+base64 is _not_ encryption and can easily be decoded
+
+### Cryptographic signatures and cookie signing
+
+Signing takes:
+
+- Data to be signed
+- Secret key
+  Then uses those to produce a signature.
+
+Mock function def:
+
+```ts
+type Signature string;
+
+function sign(data: string, secret_key: string): Signature {}
+```
+
+Sign function:
+
+- Must be deterministic
+- Resulting signature must be nearly impossible to produces without secret key
+
+This helps determine message is sent from the right person:
+
+- Suppose you and one other person have secret key
+- Person signs message w/ key
+- You receive message and signature
+- You sign message with your key
+- If signatures match message must have been sent from someone w/ same key
+
+But this isn't exactly how it works.
+
+For cookie auth the user does not have the secret key. _Only the server has the secret key._
+
+```
+When server sends data:
+Server --> "Cookie": "name=data.signature" --> Browser
+sign()
+```
+
+```
+When browser sends data back:
+Browser --> "Cookie": "name=data.signature" --> Server
+                                                sign()
+```
+
+Since server has the sign function it can sign the data it recieved from the user.
+If the signature matches the original one then it is the original data.
+
+### Signing cookies in Remix
+
+The remix cookie helper has an option called `secrets`:
+
+```js
+createCookie("remix-recipes__userId", {
+  // IMPORTANT: Don't store raw secrets like this
+  secrets: ["a", "b", "c"],
+  httpOnly: true,
+  secure: true,
+});
+```
+
+Remix uses strings in this array to automatically sign cookie when array is serialized.
+Remix also verifies signature when parsing cookie
+Each secret is considered a valid secret key when verifying incoming cookies.
+Only first string signs outgoing cookies which means we can rotate secrets by prepending new keys.
+
+### Sessions
+
+Session is a common term but in this case there are two things it can refer to:
+
+The time period the user has the cookie active:
+
+- Session ends when cookie expires
+- Session ends when user deletes cookie manually by logging out
+
+Session information:
+
+- User Id
+- Data/Time started
+- Which browser/device started session (user-agent)
+- Actions the user takes
+
+Why both definitions?
+
+- Useful to have shorthand for data about a current user's session
+- Standard word
+
+A cookie that stores session data is usually called a session cookie. There are some conventions for session cookies:
+
+- Name is of form: `<name-of-app>__session`
+- Value is typically base64 stringified json object
+
+### Session Storage
+
+Our current strategy is to store base64 serialized JSON data in a session cookie. But we don't need to store data this way.
+
+We could also store session data in a database or a file or elsewhere.
+
+One good reason to store session data outside of the cookie is because cookie size is limited:
+
+- Instead of storing a large amount of session data you can store a pointer to it
+- Can then store the data elsewhere
+
+It's also good to avoid burdening the network with larger than necessary cookies.
+
+If we're changing session state a lot we may end up sending an excessive amount of Set-Cookie headers.
+
+Can centralize sessions:
+
+- Easier to analyze session data if it's all in one place
+- Can share sessions between a user's different devices
+- Can log a user out of multiple devices at once
+- Generally more control
+
+For our app we're only going to track the userId. We'd already have to track this if we stored session info elsewhere
+so there's not a good reason to create the additional storage.
+
+### Remix session helpers
+
+Remix can abstract away specific storage location of sessions which makes transitioning less painful.
+
+Remix has a `SessionStorage` object with three methods:
+
+- getSession
+- commitSession
+- destroySession
+
+Remix has storage-location-specific options for creating `SessionStorage` objects:
+
+- createCookieSessionStorage
+- createMemorySessionStorage
+- createFileSessionStorage
+- createCloudflareKVSessionStorage
+- createArcTableSessionStorage
+- createSessionStorage <- Generic and allows custom storage location
+
+We'll use first option.
+
+We can create session storage like this:
+
+```js
+const { getSession, commitSession, destroySession } =
+  createCookieSessionStorage({
+    cookie: sessionCookie,
+  });
+
+export { getSession, commitSession, destroySession };
+```
+
+Then we can use them like this:
+
+```js
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const cookieHeader = request.headers.get("cookie");
+  // This comes back null if signature does not match
+  const session = await getSession(cookieHeader);
+  console.log("Session data: ", session.data);
+  // browser sends all cookies so we need to parse to find the specific one
+};
+```
+
+Session object is essentially a key-value Map.
+
+Can read _all_ data with `session.data`
+
+**Or:**
+
+Call `session.get()`. Some useful methods:
+
+```js
+session.data; // get all data
+session.get(key); // get data from key
+session.has(key); // check if session has key
+session.set(key, value); // set key to value
+session.unset(key); // remove key
+session.flash(key, value); // sets temporary data that is automatically deleted on next get call
+```
+
+These functions _do not_ persist to the storage location. If you want to do that you need to pass the session to commit session:
+
+```js
+session.set("foo", "bar");
+// headerInfo is a string that can be used for "Set-Cookie" header's value
+const headerInfo = commitSession(session);
+```
+
+destroySession accepts a session object and returns a "Set-Cookie" header. The set cookie header sets the expiration to Date.now();
