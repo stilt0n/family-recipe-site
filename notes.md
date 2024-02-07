@@ -872,3 +872,16 @@ The payload is an encrypted value. In this case a json string:
   "createdAt": "a-timestamp-for-creation-time"
 }
 ```
+
+### More on the nonce
+
+We need the nonce to help establish that the login request is coming from
+the same browser that requested the magic link. To do this:
+
+- Send nonce in payload to the user's email
+- Send nonce to user's browser as a cookie
+
+Now when we check the magic link we can confirm the nonce matches the nonce
+that the user has stored in their cookies.
+
+For our setup we'll just be reusing the session cookie for this.

@@ -1,39 +1,36 @@
 import cn from "classnames";
 import { useActionData } from "@remix-run/react";
-import { ActionFunction, LoaderFunctionArgs, json } from "@remix-run/node";
+import { ActionFunction, json } from "@remix-run/node";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
 import { FormError } from "~/components/forms/formError";
 import { Button } from "~/components/forms/button";
 import { validateForm, sendErrors } from "~/utils/validation";
-import { getUser } from "~/models/user.server";
-import { sessionCookie } from "~/cookies";
-import { getSession } from "~/sessions";
+import { commitSession, getSession } from "~/sessions";
 import { generateMagicLink } from "~/magicLinks.server";
 
 const loginSchema = z.object({
   email: z.string().email(),
 });
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
+export const action: ActionFunction = async ({ request }) => {
   const cookieHeader = request.headers.get("cookie");
   // This comes back null if signature does not match
   const session = await getSession(cookieHeader);
-  console.log("Session data: ", session.data);
-  // browser sends all cookies so we need to parse to find the specific one
-  return null;
-};
-
-export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   return validateForm(
     formData,
     loginSchema,
     async ({ email }) => {
       const nonce = uuid();
+      session.flash("nonce", nonce);
       const link = generateMagicLink(email, nonce);
       console.log(link);
-      return json("okay");
+      return json("okay", {
+        headers: {
+          "Set-Cookie": await commitSession(session),
+        },
+      });
     },
     sendErrors
   );
