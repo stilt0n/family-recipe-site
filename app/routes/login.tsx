@@ -8,6 +8,7 @@ import { Button } from "~/components/forms/button";
 import { validateForm, sendErrors } from "~/utils/validation";
 import { commitSession, getSession } from "~/sessions";
 import { generateMagicLink } from "~/magicLinks.server";
+import { Input } from "~/components/forms/input";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -23,7 +24,9 @@ export const action: ActionFunction = async ({ request }) => {
     loginSchema,
     async ({ email }) => {
       const nonce = uuid();
-      session.flash("nonce", nonce);
+      // using set instead of flash to avoid things breaking
+      // on form reload when user enters invalid input
+      session.set("nonce", nonce);
       const link = generateMagicLink(email, nonce);
       console.log(link);
       return json("okay", {
@@ -43,16 +46,12 @@ const Login = () => {
       <h1 className="text-3xl mb-8">Family Recipes</h1>
       <form method="post" className="mx-auto md:w-1/3">
         <div className="text-left pb-4">
-          <input
+          <Input
             type="email"
             name="email"
             defaultValue={actionData?.email}
             placeholder="Email"
             autoComplete="off"
-            className={cn(
-              "w-full outline-none border-2 border-gray-200",
-              "focus:border-primary round-md p-2"
-            )}
           />
           <FormError>{actionData?.errors?.email}</FormError>
         </div>
