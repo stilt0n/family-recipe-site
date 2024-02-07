@@ -848,3 +848,27 @@ const headerInfo = commitSession(session);
 ```
 
 destroySession accepts a session object and returns a "Set-Cookie" header. The set cookie header sets the expiration to Date.now();
+
+## Magic Link Sign In
+
+When a user sends a request to the server, the server will create url with magic link params and send it to the user's email. The user having access to the email helps authenticate the user. But magic links have some additional properties:
+
+- Can only be used one time
+- Must be used from the same device and browser that they were requested from
+- Only valid for a few minutes
+
+Magic link anatomy:
+
+http://localhost:3000/magic-link-signin?magic=83hhfdslnv921u
+
+<origin-url>/<route>?[param]=[payload]
+
+The payload is an encrypted value. In this case a json string:
+
+```json
+{
+  "email": "jeffy@family-circus.com",
+  "nonce": "stands-for-Number-used-ONCE",
+  "createdAt": "a-timestamp-for-creation-time"
+}
+```
