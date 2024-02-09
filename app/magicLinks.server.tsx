@@ -1,5 +1,7 @@
 import { json } from "@remix-run/node";
 import Cryptr from "cryptr";
+import { sendEmail } from "./utils/emails.server";
+import { renderToStaticMarkup } from "react-dom/server";
 
 if (typeof process.env.MAGIC_LINK_SECRET != "string") {
   throw new Error("Environment is missing magic link secret");
@@ -61,4 +63,25 @@ const isMagicLinkPayload = (value: any): value is MagicLinkPayload => {
     typeof value.nonce === "string" &&
     typeof value.createdAt === "string"
   );
+};
+
+export const sendMagicLinkEmail = (magicLink: string, recipient: string) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log("Skipping email send because not in production.");
+    console.log(`Magic Link:\n${magicLink}`);
+    return;
+  }
+  const html = renderToStaticMarkup(
+    <div>
+      <h1>Log in to Remix Recipes</h1>
+      <p>Hey, there! Click the link below to log in to the Remix Recipes app</p>
+      <a href={magicLink}>Log In</a>
+    </div>
+  );
+  return sendEmail({
+    from: "Remix Recipes <newsletters.mattias@gmail.com>",
+    to: recipient,
+    subject: "Log in to Remix Recipes!",
+    html,
+  });
 };
