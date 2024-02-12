@@ -70,7 +70,7 @@ export const action: ActionFunction = async ({ request }) => {
       const session = await getSession(cookie);
       session.set("userId", user.id);
       session.unset("nonce");
-      return redirect("/app/pantry", {
+      return redirect("/app/recipes", {
         headers: {
           "Set-Cookie": await commitSession(session),
         },

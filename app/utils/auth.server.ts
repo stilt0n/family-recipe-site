@@ -16,7 +16,7 @@ export const getCurrentUser = async (request: Request) => {
 export const requireLoggedOutUser = async (request: Request) => {
   const user = await getCurrentUser(request);
   if (user !== null) {
-    throw redirect("/app/pantry");
+    throw redirect("/app/recipes");
   }
 };
 
