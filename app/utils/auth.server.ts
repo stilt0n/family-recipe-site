@@ -19,3 +19,11 @@ export const requireLoggedOutUser = async (request: Request) => {
     throw redirect("/app/pantry");
   }
 };
+
+export const requireLoggedInUser = async (request: Request) => {
+  const user = await getCurrentUser(request);
+  if (user === null) {
+    throw redirect("/login");
+  }
+  return user;
+};

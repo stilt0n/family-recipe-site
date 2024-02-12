@@ -1,3 +1,4 @@
+import cn from "classnames";
 import { ActionFunctionArgs, LoaderFunctionArgs, json } from "@remix-run/node";
 import {
   useLoaderData,
@@ -9,14 +10,19 @@ import {
   createShelf,
   deleteShelf,
   getAllShelves,
+  getShelf,
   saveShelfName,
 } from "~/models/pantryShelf.sever";
 import { SearchForm } from "~/components/forms/searchForm";
 import { ShelfCreationForm } from "~/components/forms/shelfCreationForm";
 import { PantryShelf } from "~/components/pantryShelf";
 import { validateForm, sendErrors } from "~/utils/validation";
-import { createShelfItem, deleteShelfItem } from "~/models/pantryItem.server";
-import cn from "classnames";
+import {
+  createShelfItem,
+  deleteShelfItem,
+  getShelfItem,
+} from "~/models/pantryItem.server";
+import { requireLoggedInUser } from "~/utils/auth.server";
 
 const saveShelfNameSchema = z.object({
   shelfId: z.string(),
@@ -38,44 +44,77 @@ const deleteShelfItemSchema = z.object({
 // Remix creates an API layer from the loader and that api layer gets called
 // when we fetch data from the component
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const user = await requireLoggedInUser(request);
   const url = new URL(request.url);
   const query = url.searchParams.get("query");
   // This is basically select * from pantryShelf
-  const shelves = await getAllShelves(query);
+  const shelves = await getAllShelves(user.id, query);
   return json({ shelves });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const user = await requireLoggedInUser(request);
   const formData = await request.formData();
   switch (formData.get("_action")) {
     case "createShelf":
-      return createShelf("New Shelf");
+      return createShelf(user.id, "New Shelf");
     case "deleteShelf":
       return validateForm(
         formData,
         deleteShelfSchema,
-        ({ shelfId }) => deleteShelf(shelfId),
+        async ({ shelfId }) => {
+          const shelf = await getShelf(shelfId);
+          if (shelf && shelf.userId !== user.id) {
+            throw json(
+              {
+                message: "You can not delete shelves that don't belong to you!",
+              },
+              { status: 401 }
+            );
+          }
+          return deleteShelf(shelfId);
+        },
         sendErrors
       );
     case "saveShelfName":
       return validateForm(
         formData,
         saveShelfNameSchema,
-        ({ shelfId, shelfName }) => saveShelfName(shelfId, shelfName),
+        async ({ shelfId, shelfName }) => {
+          const shelf = await getShelf(shelfId);
+          if (shelf && shelf.userId !== user.id) {
+            throw json(
+              {
+                message: "You can not rename shelves that don't belong to you!",
+              },
+              { status: 401 }
+            );
+          }
+          return saveShelfName(shelfId, shelfName);
+        },
         sendErrors
       );
     case "createShelfItem":
       return validateForm(
         formData,
         createShelfItemSchema,
-        ({ shelfId, itemName }) => createShelfItem(shelfId, itemName),
+        ({ shelfId, itemName }) => createShelfItem(user.id, shelfId, itemName),
         sendErrors
       );
     case "deleteShelfItem":
       return validateForm(
         formData,
         deleteShelfItemSchema,
-        ({ itemId }) => deleteShelfItem(itemId),
+        async ({ itemId }) => {
+          const item = await getShelfItem(itemId);
+          if (item && item.userId !== user.id) {
+            throw json(
+              { message: "You can not delete items that don't belong to you!" },
+              { status: 401 }
+            );
+          }
+          return deleteShelfItem(itemId);
+        },
         sendErrors
       );
     default:

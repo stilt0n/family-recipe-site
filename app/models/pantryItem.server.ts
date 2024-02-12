@@ -1,9 +1,14 @@
 import { handleDelete } from "./utils";
 import db from "~/db.server";
 
-export const createShelfItem = (shelfId: string, name: string) => {
+export const createShelfItem = (
+  userId: string,
+  shelfId: string,
+  name: string
+) => {
   return db.pantryItem.create({
     data: {
+      userId,
       shelfId,
       name,
     },
@@ -18,4 +23,8 @@ export const deleteShelfItem = (id: string) => {
       },
     })
   );
+};
+
+export const getShelfItem = (id: string) => {
+  return db.pantryItem.findUnique({ where: { id } });
 };
