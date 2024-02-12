@@ -17,3 +17,7 @@ export const createUser = (
     },
   });
 };
+
+export const getUserById = (id: string) => {
+  return db.user.findUnique({ where: { id } });
+};

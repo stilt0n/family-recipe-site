@@ -1,5 +1,5 @@
 import { useActionData } from "@remix-run/react";
-import { ActionFunction, json } from "@remix-run/node";
+import { ActionFunction, LoaderFunction, json } from "@remix-run/node";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
 import { FormError } from "~/components/forms/formError";
@@ -8,12 +8,19 @@ import { validateForm, sendErrors } from "~/utils/validation";
 import { commitSession, getSession } from "~/sessions";
 import { generateMagicLink, sendMagicLinkEmail } from "~/magicLinks.server";
 import { Input } from "~/components/forms/input";
+import { requireLoggedOutUser } from "~/utils/auth.server";
 
 const loginSchema = z.object({
   email: z.string().email(),
 });
 
+export const loader: LoaderFunction = async ({ request }) => {
+  await requireLoggedOutUser(request);
+  return null;
+};
+
 export const action: ActionFunction = async ({ request }) => {
+  await requireLoggedOutUser(request);
   const cookieHeader = request.headers.get("cookie");
   // This comes back null if signature does not match
   const session = await getSession(cookieHeader);
