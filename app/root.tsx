@@ -1,12 +1,12 @@
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import {
-  Link,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  isRouteErrorResponse,
   useRouteError,
 } from "@remix-run/react";
 import {
@@ -19,6 +19,7 @@ import {
 import { AppNavLink } from "./components/appNavLink";
 import cn from "classnames";
 import tailwindStyles from "./tailwind.css";
+import { HandledError, UnhandledError } from "./components/error";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: tailwindStyles },
@@ -96,14 +97,11 @@ export const ErrorBoundary = () => {
       </head>
       <body>
         <div className="p-4">
-          <h1 className="text-2xl pb-3">Whoops! Something went wrong.</h1>
-          <p>You&apos;re seeing this because an unexpected error occurred.</p>
-          {error instanceof Error ? (
-            <p className="my-4 font-bold">{error.message}</p>
-          ) : null}
-          <Link to="/" className="text-primary">
-            Return to home page
-          </Link>
+          {isRouteErrorResponse(error) ? (
+            <HandledError error={error} />
+          ) : (
+            <UnhandledError error={error} />
+          )}
         </div>
       </body>
     </html>

@@ -1,8 +1,10 @@
 import cn from "classnames";
 import { ActionFunctionArgs, LoaderFunctionArgs, json } from "@remix-run/node";
 import {
+  isRouteErrorResponse,
   useLoaderData,
   useNavigation,
+  useRouteError,
   useSearchParams,
 } from "@remix-run/react";
 import { z } from "zod";
@@ -23,6 +25,7 @@ import {
   getShelfItem,
 } from "~/models/pantryItem.server";
 import { requireLoggedInUser } from "~/utils/auth.server";
+import { HandledError, UnhandledError } from "../../components/error";
 
 const saveShelfNameSchema = z.object({
   shelfId: z.string(),
@@ -151,6 +154,22 @@ const Pantry = () => {
       </ul>
     </div>
   );
+};
+
+export const ErrorBoundary = () => {
+  const error = useRouteError();
+  if (isRouteErrorResponse(error)) {
+    return (
+      <div className="bg-red-600 text-white rounded-md p-4">
+        <HandledError
+          error={error}
+          reroute="app/pantry"
+          rerouteMessage="Return to Pantry"
+        />
+      </div>
+    );
+  }
+  return <UnhandledError error={error} />;
 };
 
 export default Pantry;
