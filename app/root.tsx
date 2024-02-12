@@ -1,4 +1,8 @@
-import type { LinksFunction, MetaFunction } from "@remix-run/node";
+import type {
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -7,6 +11,8 @@ import {
   Scripts,
   ScrollRestoration,
   isRouteErrorResponse,
+  json,
+  useLoaderData,
   useRouteError,
 } from "@remix-run/react";
 import {
@@ -15,11 +21,13 @@ import {
   RecipeBookIcon,
   SettingsIcon,
   LoginIcon,
+  LogoutIcon,
 } from "./components/icons";
 import { AppNavLink } from "./components/appNavLink";
 import cn from "classnames";
 import tailwindStyles from "./tailwind.css";
 import { HandledError, UnhandledError } from "./components/error";
+import { getCurrentUser } from "./utils/auth.server";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: tailwindStyles },
@@ -35,7 +43,13 @@ export const meta: MetaFunction = () => {
   ];
 };
 
+export const loader: LoaderFunction = async ({ request }) => {
+  const user = await getCurrentUser(request);
+  return json({ isLoggedIn: user !== null });
+};
+
 export default function App() {
+  const data = useLoaderData<typeof loader>();
   return (
     <html lang="en">
       <head>
@@ -58,17 +72,25 @@ export default function App() {
             <AppNavLink to="discover">
               <DiscoverIcon />
             </AppNavLink>
-            <AppNavLink to="app/pantry">
-              <RecipeBookIcon />
-            </AppNavLink>
+            {data.isLoggedIn ? (
+              <AppNavLink to="app/pantry">
+                <RecipeBookIcon />
+              </AppNavLink>
+            ) : null}
             <AppNavLink to="settings">
               <SettingsIcon />
             </AppNavLink>
           </ul>
           <ul>
-            <AppNavLink to="/login">
-              <LoginIcon />
-            </AppNavLink>
+            {data.isLoggedIn ? (
+              <AppNavLink to="/logout">
+                <LogoutIcon />
+              </AppNavLink>
+            ) : (
+              <AppNavLink to="/login">
+                <LoginIcon />
+              </AppNavLink>
+            )}
           </ul>
         </nav>
         <div className="p-4 w-full md:w-[calc(100% - 4rem)]">
