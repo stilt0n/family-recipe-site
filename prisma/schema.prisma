@@ -43,4 +43,31 @@ model User {
 
   pantryShelves PantryShelf[]
   pantryItems   PantryItem[]
+  Recipes       Recipe[]
+}
+
+model Recipe {
+  id           String   @id @default(cuid())
+  name         String
+  instructions String
+  totalTime    String
+  imageUrl     String
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ingredients Ingredient[]
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Ingredient {
+  id        String   @id @default(cuid())
+  name      String
+  amount    String
+  recipeId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
