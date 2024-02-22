@@ -3,9 +3,7 @@ import { ActionFunctionArgs, LoaderFunctionArgs, json } from "@remix-run/node";
 import {
   isRouteErrorResponse,
   useLoaderData,
-  useNavigation,
   useRouteError,
-  useSearchParams,
 } from "@remix-run/react";
 import { z } from "zod";
 import {
@@ -127,19 +125,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 const Pantry = () => {
   const data = useLoaderData<typeof loader>();
-  const [searchParams] = useSearchParams();
-  const navigation = useNavigation();
-  // See MDN docs for formData. If the page is navigating
-  // and it is doing it with form data that has "query"
-  // then that means we triggered the navigation using the Form
-  const isSearching = navigation.formData?.has("query");
-
   return (
     <div>
-      <SearchForm
-        defaultValue={searchParams.get("query") ?? ""}
-        isBusy={isSearching}
-      />
+      <SearchForm placeholder="Search shelves..." />
       <ShelfCreationForm />
       <ul
         className={cn(

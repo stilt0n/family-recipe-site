@@ -1,13 +1,18 @@
-import { Form } from "@remix-run/react";
+import { Form, useSearchParams, useNavigation } from "@remix-run/react";
 import { SearchIcon } from "../icons";
 import cn from "classnames";
 
 interface SearchFormProps {
-  defaultValue: string;
-  isBusy?: boolean;
+  placeholder?: string;
 }
 
-export const SearchForm = ({ isBusy, defaultValue }: SearchFormProps) => {
+export const SearchForm = (props: SearchFormProps) => {
+  const navigation = useNavigation();
+  const [searchParams] = useSearchParams();
+  // See MDN docs for formData. If the page is navigating
+  // and it is doing it with form data that has "query"
+  // then that means we triggered the navigation using the Form
+  const isBusy = navigation.formData?.has("query");
   return (
     <Form
       className={cn(
@@ -20,12 +25,12 @@ export const SearchForm = ({ isBusy, defaultValue }: SearchFormProps) => {
         <SearchIcon />
       </button>
       <input
-        defaultValue={defaultValue}
+        defaultValue={searchParams.get("query") ?? ""}
         type="text"
         name="query"
-        placeholder="Search shelves..."
         className="w-full py-3 px-2 outline-none"
         autoComplete="off"
+        {...props}
       />
     </Form>
   );
