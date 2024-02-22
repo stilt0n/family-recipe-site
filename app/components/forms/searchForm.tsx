@@ -4,9 +4,10 @@ import cn from "classnames";
 
 interface SearchFormProps {
   placeholder?: string;
+  className?: string;
 }
 
-export const SearchForm = (props: SearchFormProps) => {
+export const SearchForm = ({ className, ...props }: SearchFormProps) => {
   const navigation = useNavigation();
   const [searchParams] = useSearchParams();
   // See MDN docs for formData. If the page is navigating
@@ -17,8 +18,9 @@ export const SearchForm = (props: SearchFormProps) => {
     <Form
       className={cn(
         "flex border-2 border-gray-300 rounded-md",
-        "focus-within:border-primary md:w-80",
-        isBusy ? "animate-pulse" : ""
+        "focus-within:border-primary",
+        isBusy ? "animate-pulse" : "",
+        className
       )}
     >
       <button className="px-2 mr-1">
@@ -28,7 +30,7 @@ export const SearchForm = (props: SearchFormProps) => {
         defaultValue={searchParams.get("query") ?? ""}
         type="text"
         name="query"
-        className="w-full py-3 px-2 outline-none"
+        className="w-full py-3 px-2 outline-none rounded-md"
         autoComplete="off"
         {...props}
       />

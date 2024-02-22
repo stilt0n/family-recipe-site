@@ -127,7 +127,7 @@ const Pantry = () => {
   const data = useLoaderData<typeof loader>();
   return (
     <div>
-      <SearchForm placeholder="Search shelves..." />
+      <SearchForm className="md:w-80" placeholder="Search shelves..." />
       <ShelfCreationForm />
       <ul
         className={cn(

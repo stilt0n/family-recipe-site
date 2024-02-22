@@ -8,11 +8,20 @@ import {
   RecipePageWrapper,
 } from "~/components/recipes/wrappers";
 import { RecipeCard } from "~/components/recipes/card";
+import { SearchForm } from "~/components/forms/searchForm";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const user = await requireLoggedInUser(request);
+  const url = new URL(request.url);
+  const query = url.searchParams.get("query");
   const recipes = await db.recipe.findMany({
-    where: { userId: user.id },
+    where: {
+      userId: user.id,
+      name: {
+        contains: query ?? "",
+        mode: "insensitive",
+      },
+    },
     select: { name: true, totalTime: true, imageUrl: true, id: true },
   });
 
@@ -24,6 +33,7 @@ const Recipes = () => {
   return (
     <RecipePageWrapper>
       <RecipeListWrapper>
+        <SearchForm placeholder="search recipes..." />
         <ul>
           {data?.recipes.map((recipe) => (
             <li className="my-4" key={recipe.id}>
