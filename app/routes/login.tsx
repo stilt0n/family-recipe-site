@@ -78,6 +78,7 @@ const LoginForm = (props: LoginFormProps) => {
             defaultValue={props.email}
             placeholder="Email"
             autoComplete="off"
+            error={!!props.emailError}
           />
           <FormError>{props.emailError}</FormError>
         </div>

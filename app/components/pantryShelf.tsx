@@ -7,6 +7,7 @@ import { FormError } from "./forms/formError";
 import { getFetcherErrors } from "~/utils/getFetcherErrors";
 import { useIsHydrated, useServerLayoutEffect } from "~/utils/misc";
 import cn from "classnames";
+import { Input } from "./forms/input";
 
 type Shelf = {
   id: string;
@@ -50,13 +51,11 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
     >
       <SaveShelfNameFetcher.Form method="post" className="flex">
         <div className="w-full mb-2 peer">
-          <input
+          <Input
+            variant="bottom-border"
             type="text"
-            className={cn(
-              "text-2xl font-extrabold w-full outline-none",
-              "border-b-2 border-b-background focus:border-b-primary",
-              saveErrors?.shelfName ? "border-b-red-600" : ""
-            )}
+            className="text-2xl font-extrabold"
+            error={!!saveErrors?.shelfName}
             defaultValue={shelf.name}
             name="shelfName"
             placeholder="Shelf Name"
@@ -120,13 +119,10 @@ export const PantryShelf = ({ shelf }: PantryShelfProps) => {
         }}
       >
         <div className="w-full mb-2 peer">
-          <input
+          <Input
             type="text"
-            className={cn(
-              "w-full outline-none",
-              "border-b-2 border-b-background focus:border-b-primary",
-              createItemErrors?.shelfName ? "border-b-red-600" : ""
-            )}
+            variant="bottom-border"
+            error={!!createItemErrors?.shelfName}
             name="itemName"
             placeholder="New Item"
             autoComplete="off"

@@ -111,6 +111,7 @@ const ValidateMagicLink = () => {
                 autoComplete="off"
                 name="firstName"
                 defaultValue={actionData?.firstName}
+                error={!!actionData?.errors?.firstName}
               />
               <FormError>{actionData?.errors?.firstName}</FormError>
             </div>
@@ -122,6 +123,7 @@ const ValidateMagicLink = () => {
                 autoComplete="off"
                 name="lastName"
                 defaultValue={actionData?.lastName}
+                error={!!actionData?.errors?.lastName}
               />
               <FormError>{actionData?.errors?.lastName}</FormError>
             </div>
