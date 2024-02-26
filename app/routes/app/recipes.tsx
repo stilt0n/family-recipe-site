@@ -4,6 +4,7 @@ import {
   Outlet,
   useLoaderData,
   useLocation,
+  useNavigation,
 } from "@remix-run/react";
 import {
   ActionFunctionArgs,
@@ -61,6 +62,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 const Recipes = () => {
   const data = useLoaderData<typeof loader>();
   const location = useLocation();
+  const navigation = useNavigation();
   return (
     <RecipePageWrapper>
       <RecipeListWrapper>
@@ -72,23 +74,27 @@ const Recipes = () => {
           </Button>
         </Form>
         <ul>
-          {data?.recipes.map((recipe) => (
-            <li className="my-4" key={recipe.id}>
-              <NavLink
-                reloadDocument
-                to={{ pathname: recipe.id, search: location.search }}
-              >
-                {({ isActive }) => (
-                  <RecipeCard
-                    name={recipe.name}
-                    totalTime={recipe.totalTime}
-                    imageUrl={recipe.imageUrl}
-                    isActive={isActive}
-                  />
-                )}
-              </NavLink>
-            </li>
-          ))}
+          {data?.recipes.map((recipe) => {
+            const isLoading = navigation.location?.pathname.endsWith(recipe.id);
+            return (
+              <li className="my-4" key={recipe.id}>
+                <NavLink
+                  reloadDocument
+                  to={{ pathname: recipe.id, search: location.search }}
+                >
+                  {({ isActive }) => (
+                    <RecipeCard
+                      name={recipe.name}
+                      totalTime={recipe.totalTime}
+                      imageUrl={recipe.imageUrl}
+                      isActive={isActive}
+                      isLoading={isLoading}
+                    />
+                  )}
+                </NavLink>
+              </li>
+            );
+          })}
         </ul>
       </RecipeListWrapper>
       <RecipeDetailWrapper>
