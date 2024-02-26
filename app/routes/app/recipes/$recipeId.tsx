@@ -9,8 +9,8 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     // The name `recipeId` here comes from the file name
     where: { id: params.recipeId },
   });
-
-  return json({ recipe });
+  // cache data for 10 seconds before looking again
+  return json({ recipe }, { headers: { "Cache-Control": "max-age=10" } });
 };
 
 const RecipeDetail = () => {

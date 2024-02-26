@@ -81,6 +81,8 @@ const Recipes = () => {
                 <NavLink
                   reloadDocument
                   to={{ pathname: recipe.id, search: location.search }}
+                  // fetch data when link becomes focused or hovered
+                  prefetch="intent"
                 >
                   {({ isActive }) => (
                     <RecipeCard
