@@ -2,13 +2,21 @@
 
 import { Fragment } from "react";
 import cn from "classnames";
-import { LoaderFunctionArgs, json } from "@remix-run/node";
+import { LoaderFunctionArgs, ActionFunctionArgs, json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import db from "~/db.server";
 import { Input } from "~/components/forms/input";
 import { FormError } from "~/components/forms/formError";
 import { DeleteIcon, TimeIcon } from "~/components/icons";
 import { Button } from "~/components/forms/button";
+import { z } from "zod";
+import { sendErrors, validateForm } from "~/utils/validation";
+
+const saveRecipeSchema = z.object({
+  name: z.string().min(1, "Name cannot be blank"),
+  totalTime: z.string().min(1, "Total time cannot be blank"),
+  instructions: z.string().min(1, "Instructions cannot be blank"),
+});
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const recipe = await db.recipe.findUnique({
@@ -28,9 +36,24 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   return json({ recipe }, { headers: { "Cache-Control": "max-age=10" } });
 };
 
+export const action = async ({ request, params }: ActionFunctionArgs) => {
+  const formData = await request.formData();
+  switch (formData.get("_action")) {
+    case "saveRecipe": {
+      return validateForm(
+        formData,
+        saveRecipeSchema,
+        (data) => db.recipe.update({ where: { id: params.recipeId }, data }),
+        sendErrors
+      );
+    }
+    default:
+      return null;
+  }
+};
+
 const RecipeDetail = () => {
   const data = useLoaderData<typeof loader>();
-
   return (
     <Form method="post">
       <div className="mb-2">
@@ -110,7 +133,7 @@ const RecipeDetail = () => {
       <hr className="my-4" />
       <div className="flex justify-between">
         <Button variant="delete">Delete this recipe</Button>
-        <Button variant="primary">
+        <Button variant="primary" name="_action" value="saveRecipe">
           <div className="flex flex-col justify-center h-full">Save</div>
         </Button>
       </div>
