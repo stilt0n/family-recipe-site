@@ -8,7 +8,13 @@ import {
   ActionFunction,
   redirect,
 } from "@remix-run/node";
-import { Form, useActionData, useLoaderData } from "@remix-run/react";
+import {
+  Form,
+  isRouteErrorResponse,
+  useActionData,
+  useLoaderData,
+  useRouteError,
+} from "@remix-run/react";
 import db from "~/db.server";
 import { Input } from "~/components/forms/input";
 import { FormError } from "~/components/forms/formError";
@@ -17,6 +23,8 @@ import { Button } from "~/components/forms/button";
 import { z } from "zod";
 import { sendErrors, validateForm } from "~/utils/validation";
 import { handleDelete } from "~/models/utils";
+import { requireLoggedInUser } from "~/utils/auth.server";
+import { HandledError, UnhandledError } from "~/components/error";
 
 const saveRecipeSchema = z
   .object({
@@ -43,7 +51,8 @@ const createIngredientSchema = z.object({
   newIngredientName: z.string().min(1, "Ingredient name cannot be blank"),
 });
 
-export const loader = async ({ params }: LoaderFunctionArgs) => {
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  const user = await requireLoggedInUser(request);
   const recipe = await db.recipe.findUnique({
     // The name `recipeId` here comes from the file name
     where: { id: params.recipeId },
@@ -58,13 +67,45 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       },
     },
   });
+
+  if (recipe === null) {
+    throw json(
+      { message: "The recipe you are looking for does not exist" },
+      { status: 404 }
+    );
+  }
+
+  if (recipe.userId !== user.id) {
+    throw json(
+      { message: "You are not authorized to view this recipe" },
+      { status: 401 }
+    );
+  }
+
   // cache data for 10 seconds before looking again
   return json({ recipe }, { headers: { "Cache-Control": "max-age=10" } });
 };
 
 export const action: ActionFunction = async ({ request, params }) => {
-  const formData = await request.formData();
+  const user = await requireLoggedInUser(request);
   const recipeId = String(params.recipeId);
+  const recipe = await db.recipe.findUnique({ where: { id: recipeId } });
+
+  if (recipe === null) {
+    throw json(
+      { message: "The recipe you are looking for does not exist" },
+      { status: 404 }
+    );
+  }
+
+  if (recipe.userId !== user.id) {
+    throw json(
+      { message: "You are not authorized to make changes to this recipe" },
+      { status: 401 }
+    );
+  }
+
+  const formData = await request.formData();
   const _action = formData.get("_action");
 
   if (typeof _action === "string" && _action.startsWith("deleteIngredient")) {
@@ -247,6 +288,22 @@ const RecipeDetail = () => {
       </div>
     </Form>
   );
+};
+
+export const ErrorBoundary = () => {
+  const error = useRouteError();
+  if (isRouteErrorResponse(error)) {
+    return (
+      <div className="bg-red-600 text-white rounded-md p-4">
+        <HandledError
+          error={error}
+          reroute="app/recipes"
+          rerouteMessage="Return to Recipes"
+        />
+      </div>
+    );
+  }
+  return <UnhandledError error={error} />;
 };
 
 export default RecipeDetail;
