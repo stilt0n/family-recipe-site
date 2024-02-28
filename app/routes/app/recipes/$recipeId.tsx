@@ -2,7 +2,12 @@
 
 import { Fragment } from "react";
 import cn from "classnames";
-import { LoaderFunctionArgs, json, ActionFunction } from "@remix-run/node";
+import {
+  LoaderFunctionArgs,
+  json,
+  ActionFunction,
+  redirect,
+} from "@remix-run/node";
 import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import db from "~/db.server";
 import { Input } from "~/components/forms/input";
@@ -11,6 +16,7 @@ import { DeleteIcon, SaveIcon, TimeIcon } from "~/components/icons";
 import { Button } from "~/components/forms/button";
 import { z } from "zod";
 import { sendErrors, validateForm } from "~/utils/validation";
+import { handleDelete } from "~/models/utils";
 
 const saveRecipeSchema = z
   .object({
@@ -59,8 +65,15 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 export const action: ActionFunction = async ({ request, params }) => {
   const formData = await request.formData();
   const recipeId = String(params.recipeId);
-  switch (formData.get("_action")) {
-    case "saveRecipe": {
+  const _action = formData.get("_action");
+
+  if (typeof _action === "string" && _action.startsWith("deleteIngredient")) {
+    const id = _action.replace("deleteIngredient.", "");
+    return handleDelete(() => db.ingredient.delete({ where: { id } }));
+  }
+
+  switch (_action) {
+    case "saveRecipe":
       return validateForm(
         formData,
         saveRecipeSchema,
@@ -83,8 +96,7 @@ export const action: ActionFunction = async ({ request, params }) => {
         },
         sendErrors
       );
-    }
-    case "createIngredient": {
+    case "createIngredient":
       return validateForm(
         formData,
         createIngredientSchema,
@@ -99,7 +111,10 @@ export const action: ActionFunction = async ({ request, params }) => {
         },
         sendErrors
       );
-    }
+
+    case "deleteRecipe":
+      await handleDelete(() => db.recipe.delete({ where: { id: recipeId } }));
+      return redirect("/app/recipes");
     default:
       return null;
   }
@@ -171,7 +186,7 @@ const RecipeDetail = () => {
                 {actionData?.errors?.[`ingredientNames.${i}`]}
               </FormError>
             </div>
-            <button>
+            <button name="_action" value={`deleteIngredient.${ingredient.id}`}>
               <DeleteIcon />
             </button>
           </Fragment>
@@ -223,7 +238,9 @@ const RecipeDetail = () => {
       <FormError>{actionData?.errors?.instructions}</FormError>
       <hr className="my-4" />
       <div className="flex justify-between">
-        <Button variant="delete">Delete this recipe</Button>
+        <Button variant="delete" name="_action" value="deleteRecipe">
+          Delete this recipe
+        </Button>
         <Button variant="primary" name="_action" value="saveRecipe">
           <div className="flex flex-col justify-center h-full">Save</div>
         </Button>
