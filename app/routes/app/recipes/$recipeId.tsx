@@ -7,15 +7,34 @@ import { Form, useLoaderData } from "@remix-run/react";
 import db from "~/db.server";
 import { Input } from "~/components/forms/input";
 import { FormError } from "~/components/forms/formError";
-import { DeleteIcon, TimeIcon } from "~/components/icons";
+import { DeleteIcon, SaveIcon, TimeIcon } from "~/components/icons";
 import { Button } from "~/components/forms/button";
 import { z } from "zod";
 import { sendErrors, validateForm } from "~/utils/validation";
 
-const saveRecipeSchema = z.object({
-  name: z.string().min(1, "Name cannot be blank"),
-  totalTime: z.string().min(1, "Total time cannot be blank"),
-  instructions: z.string().min(1, "Instructions cannot be blank"),
+const saveRecipeSchema = z
+  .object({
+    name: z.string().min(1, "Name cannot be blank"),
+    totalTime: z.string().min(1, "Total time cannot be blank"),
+    instructions: z.string().min(1, "Instructions cannot be blank"),
+    ingredientIds: z
+      .array(z.string().min(1, "Ingredient id is missing"))
+      .optional(),
+    ingredientAmounts: z.array(z.string().nullable()).optional(),
+    ingredientNames: z
+      .array(z.string().min(1, "Ingredient name cannot be blank"))
+      .optional(),
+  })
+  .refine(
+    (data) =>
+      data.ingredientIds?.length === data.ingredientAmounts?.length &&
+      data.ingredientIds?.length === data.ingredientNames?.length,
+    { message: "need an equal number of ingredient amounts, names and ids" }
+  );
+
+const createIngredientSchema = z.object({
+  newIngredientAmount: z.string().nullable(),
+  newIngredientName: z.string().min(1, "Ingredient name cannot be blank"),
 });
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
@@ -29,6 +48,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
           amount: true,
           name: true,
         },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -38,12 +58,45 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   const formData = await request.formData();
+  const recipeId = String(params.recipeId);
   switch (formData.get("_action")) {
     case "saveRecipe": {
       return validateForm(
         formData,
         saveRecipeSchema,
-        (data) => db.recipe.update({ where: { id: params.recipeId }, data }),
+        ({ ingredientNames, ingredientAmounts, ingredientIds, ...data }) => {
+          return db.recipe.update({
+            where: { id: recipeId },
+            data: {
+              ...data,
+              ingredients: {
+                updateMany: ingredientIds?.map((id, index) => ({
+                  where: { id },
+                  data: {
+                    amount: ingredientAmounts?.[index] ?? undefined,
+                    name: ingredientNames?.[index],
+                  },
+                })),
+              },
+            },
+          });
+        },
+        sendErrors
+      );
+    }
+    case "createIngredient": {
+      return validateForm(
+        formData,
+        createIngredientSchema,
+        ({ newIngredientAmount, newIngredientName }) => {
+          return db.ingredient.create({
+            data: {
+              recipeId,
+              amount: newIngredientAmount ?? "",
+              name: newIngredientName,
+            },
+          });
+        },
         sendErrors
       );
     }
@@ -88,12 +141,13 @@ const RecipeDetail = () => {
         <div />
         {data.recipe?.ingredients.map((ingredient) => (
           <Fragment key={ingredient.id}>
+            <input type="hidden" name="ingredientIds[]" value={ingredient.id} />
             <div>
               <Input
                 variant="bottom-border"
                 type="text"
                 autoComplete="off"
-                name="ingredientAmount"
+                name="ingredientAmounts[]"
                 defaultValue={ingredient.amount ?? ""}
               />
             </div>
@@ -102,7 +156,7 @@ const RecipeDetail = () => {
                 variant="bottom-border"
                 type="text"
                 autoComplete="off"
-                name="ingredientName"
+                name="ingredientNames[]"
                 defaultValue={ingredient.name}
               />
             </div>
@@ -111,6 +165,29 @@ const RecipeDetail = () => {
             </button>
           </Fragment>
         ))}
+        <div>
+          <Input
+            variant="bottom-border"
+            type="text"
+            autoComplete="off"
+            name="newIngredientAmount"
+            className="border-b-gray-200"
+          />
+          <FormError></FormError>
+        </div>
+        <div>
+          <Input
+            variant="bottom-border"
+            type="text"
+            autoComplete="off"
+            name="newIngredientName"
+            className="border-b-gray-200"
+          />
+          <FormError></FormError>
+        </div>
+        <button name="_action" value="createIngredient">
+          <SaveIcon />
+        </button>
       </div>
       <label
         htmlFor="instructions"
