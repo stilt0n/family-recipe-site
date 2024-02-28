@@ -2,8 +2,8 @@
 
 import { Fragment } from "react";
 import cn from "classnames";
-import { LoaderFunctionArgs, ActionFunctionArgs, json } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
+import { LoaderFunctionArgs, json, ActionFunction } from "@remix-run/node";
+import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import db from "~/db.server";
 import { Input } from "~/components/forms/input";
 import { FormError } from "~/components/forms/formError";
@@ -56,7 +56,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   return json({ recipe }, { headers: { "Cache-Control": "max-age=10" } });
 };
 
-export const action = async ({ request, params }: ActionFunctionArgs) => {
+export const action: ActionFunction = async ({ request, params }) => {
   const formData = await request.formData();
   const recipeId = String(params.recipeId);
   switch (formData.get("_action")) {
@@ -107,6 +107,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
 const RecipeDetail = () => {
   const data = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   return (
     <Form method="post">
       <div className="mb-2">
@@ -118,8 +119,9 @@ const RecipeDetail = () => {
           className="text-2xl font-extrabold"
           name="name"
           defaultValue={data.recipe?.name}
+          error={!!actionData?.errors?.name}
         />
-        <FormError></FormError>
+        <FormError>{actionData?.errors?.name}</FormError>
       </div>
       <div className="flex">
         <TimeIcon />
@@ -131,15 +133,16 @@ const RecipeDetail = () => {
             autoComplete="off"
             name="totalTime"
             defaultValue={data.recipe?.totalTime}
+            error={!!actionData?.errors?.totalTime}
           />
-          <FormError></FormError>
+          <FormError>{actionData?.errors?.totalTime}</FormError>
         </div>
       </div>
       <div className="grid grid-cols-[30%_auto_min-content] my-4 gap-2">
         <h2 className="font-bold text-sm pb-1">Amount</h2>
         <h2 className="font-bold text-sm pb-1">Name</h2>
         <div />
-        {data.recipe?.ingredients.map((ingredient) => (
+        {data.recipe?.ingredients.map((ingredient, i) => (
           <Fragment key={ingredient.id}>
             <input type="hidden" name="ingredientIds[]" value={ingredient.id} />
             <div>
@@ -149,7 +152,11 @@ const RecipeDetail = () => {
                 autoComplete="off"
                 name="ingredientAmounts[]"
                 defaultValue={ingredient.amount ?? ""}
+                error={!!actionData?.errors?.[`ingredientAmounts.${i}`]}
               />
+              <FormError>
+                {actionData?.errors?.[`ingredientAmounts.${i}`]}
+              </FormError>
             </div>
             <div>
               <Input
@@ -158,7 +165,11 @@ const RecipeDetail = () => {
                 autoComplete="off"
                 name="ingredientNames[]"
                 defaultValue={ingredient.name}
+                error={!!actionData?.errors?.[`ingredientNames.${i}`]}
               />
+              <FormError>
+                {actionData?.errors?.[`ingredientNames.${i}`]}
+              </FormError>
             </div>
             <button>
               <DeleteIcon />
@@ -172,8 +183,9 @@ const RecipeDetail = () => {
             autoComplete="off"
             name="newIngredientAmount"
             className="border-b-gray-200"
+            error={!!actionData?.errors?.newIngredientAmount}
           />
-          <FormError></FormError>
+          <FormError>{actionData?.errors?.newIngredientAmount}</FormError>
         </div>
         <div>
           <Input
@@ -182,8 +194,9 @@ const RecipeDetail = () => {
             autoComplete="off"
             name="newIngredientName"
             className="border-b-gray-200"
+            error={!!actionData?.errors?.newIngredientName}
           />
-          <FormError></FormError>
+          <FormError>{actionData?.errors?.newIngredientName}</FormError>
         </div>
         <button name="_action" value="createIngredient">
           <SaveIcon />
@@ -203,10 +216,11 @@ const RecipeDetail = () => {
         defaultValue={data.recipe?.instructions}
         className={cn(
           "w-full h-56 rounded-md outline-none",
-          "focus:border-2 focus:p-3 focus:border-primary duration-300"
+          "focus:border-2 focus:p-3 focus:border-primary duration-300",
+          actionData?.errors?.instructions ? "border-2 border-red-500 p-3" : ""
         )}
       />
-      <FormError></FormError>
+      <FormError>{actionData?.errors?.instructions}</FormError>
       <hr className="my-4" />
       <div className="flex justify-between">
         <Button variant="delete">Delete this recipe</Button>
