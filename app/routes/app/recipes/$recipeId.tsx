@@ -12,6 +12,7 @@ import {
   Form,
   isRouteErrorResponse,
   useActionData,
+  useFetcher,
   useLoaderData,
   useRouteError,
 } from "@remix-run/react";
@@ -164,6 +165,37 @@ export const action: ActionFunction = async ({ request, params }) => {
 const RecipeDetail = () => {
   const data = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
+  const saveNameFetcher = useFetcher<typeof action>();
+  const saveTotalTimeFetcher = useFetcher<typeof action>();
+  const saveInstructionsFetcher = useFetcher<typeof action>();
+
+  const saveName = (name: string) =>
+    saveNameFetcher.submit(
+      {
+        _action: "saveName",
+        name,
+      },
+      { method: "post" }
+    );
+
+  const saveTotalTime = (totalTime: string) =>
+    saveTotalTimeFetcher.submit(
+      {
+        _action: "saveTotalTime",
+        totalTime,
+      },
+      { method: "post" }
+    );
+
+  const saveInstructions = (instructions: string) =>
+    saveInstructionsFetcher.submit(
+      {
+        _action: "instructions",
+        instructions,
+      },
+      { method: "post" }
+    );
+
   return (
     <Form method="post">
       <div className="mb-2">
@@ -175,9 +207,14 @@ const RecipeDetail = () => {
           className="text-2xl font-extrabold"
           name="name"
           defaultValue={data.recipe?.name}
-          error={!!actionData?.errors?.name}
+          error={
+            !!(saveNameFetcher?.data?.errors?.name || actionData?.errors?.name)
+          }
+          onChange={(e) => saveName(e.target.value)}
         />
-        <FormError>{actionData?.errors?.name}</FormError>
+        <FormError>
+          {saveNameFetcher?.data?.errors?.name || actionData?.errors?.name}
+        </FormError>
       </div>
       <div className="flex">
         <TimeIcon />
@@ -189,9 +226,18 @@ const RecipeDetail = () => {
             autoComplete="off"
             name="totalTime"
             defaultValue={data.recipe?.totalTime}
-            error={!!actionData?.errors?.totalTime}
+            error={
+              !!(
+                saveTotalTimeFetcher?.data?.errors?.totalTime ||
+                actionData?.errors?.totalTime
+              )
+            }
+            onChange={(e) => saveTotalTime(e.target.value)}
           />
-          <FormError>{actionData?.errors?.totalTime}</FormError>
+          <FormError>
+            {saveTotalTimeFetcher?.data?.errors?.totalTime ||
+              actionData?.errors?.totalTime}
+          </FormError>
         </div>
       </div>
       <div className="grid grid-cols-[30%_auto_min-content] my-4 gap-2">
@@ -273,10 +319,17 @@ const RecipeDetail = () => {
         className={cn(
           "w-full h-56 rounded-md outline-none",
           "focus:border-2 focus:p-3 focus:border-primary duration-300",
-          actionData?.errors?.instructions ? "border-2 border-red-500 p-3" : ""
+          saveInstructionsFetcher?.data?.errors?.instructions ||
+            actionData?.errors?.instructions
+            ? "border-2 border-red-500 p-3"
+            : ""
         )}
+        onChange={(e) => saveInstructions(e.target.value)}
       />
-      <FormError>{actionData?.errors?.instructions}</FormError>
+      <FormError>
+        {saveInstructionsFetcher?.data?.errors?.instructions ||
+          actionData?.errors?.instructions}
+      </FormError>
       <hr className="my-4" />
       <div className="flex justify-between">
         <Button variant="delete" name="_action" value="deleteRecipe">
