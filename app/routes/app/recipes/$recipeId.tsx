@@ -27,11 +27,30 @@ import { handleDelete } from "~/models/utils";
 import { requireLoggedInUser } from "~/utils/auth.server";
 import { HandledError, UnhandledError } from "~/components/error";
 
+const saveNameSchema = z.object({
+  name: z.string().min(1, "Name cannot be blank"),
+});
+
+const saveTotalTimeSchema = z.object({
+  totalTime: z.string().min(1, "Total time cannot be blank"),
+});
+
+const saveInstructionsSchema = z.object({
+  instructions: z.string().min(1, "Instructions cannot be blank"),
+});
+
+const saveIngredientAmountSchema = z.object({
+  amount: z.string().nullable(),
+  id: z.string().min(1, "Ingredient id is missing"),
+});
+
+const saveIngredientNameSchema = z.object({
+  name: z.string().min(1, "Ingredient name cannot be blank"),
+  id: z.string().min(1, "Ingredient id is missing"),
+});
+
 const saveRecipeSchema = z
   .object({
-    name: z.string().min(1, "Name cannot be blank"),
-    totalTime: z.string().min(1, "Total time cannot be blank"),
-    instructions: z.string().min(1, "Instructions cannot be blank"),
     ingredientIds: z
       .array(z.string().min(1, "Ingredient id is missing"))
       .optional(),
@@ -40,6 +59,9 @@ const saveRecipeSchema = z
       .array(z.string().min(1, "Ingredient name cannot be blank"))
       .optional(),
   })
+  .and(saveNameSchema)
+  .and(saveTotalTimeSchema)
+  .and(saveInstructionsSchema)
   .refine(
     (data) =>
       data.ingredientIds?.length === data.ingredientAmounts?.length &&
@@ -153,7 +175,45 @@ export const action: ActionFunction = async ({ request, params }) => {
         },
         sendErrors
       );
-
+    case "saveName":
+      return validateForm(
+        formData,
+        saveNameSchema,
+        (data) => db.recipe.update({ where: { id: recipeId }, data }),
+        sendErrors
+      );
+    case "saveTotalTime":
+      return validateForm(
+        formData,
+        saveTotalTimeSchema,
+        (data) => db.recipe.update({ where: { id: recipeId }, data }),
+        sendErrors
+      );
+    case "saveInstructions":
+      return validateForm(
+        formData,
+        saveInstructionsSchema,
+        (data) => db.recipe.update({ where: { id: recipeId }, data }),
+        sendErrors
+      );
+    case "saveIngredientAmount":
+      return validateForm(
+        formData,
+        saveIngredientAmountSchema,
+        ({ id, amount }) =>
+          db.ingredient.update({
+            where: { id },
+            data: { amount: amount ?? undefined },
+          }),
+        sendErrors
+      );
+    case "saveIngredientName":
+      return validateForm(
+        formData,
+        saveIngredientNameSchema,
+        ({ id, ...data }) => db.ingredient.update({ where: { id }, data }),
+        sendErrors
+      );
     case "deleteRecipe":
       await handleDelete(() => db.recipe.delete({ where: { id: recipeId } }));
       return redirect("/app/recipes");
@@ -190,7 +250,7 @@ const RecipeDetail = () => {
   const saveInstructions = (instructions: string) =>
     saveInstructionsFetcher.submit(
       {
-        _action: "instructions",
+        _action: "saveInstructions",
         instructions,
       },
       { method: "post" }
