@@ -26,6 +26,7 @@ import { sendErrors, validateForm } from "~/utils/validation";
 import { handleDelete } from "~/models/utils";
 import { requireLoggedInUser } from "~/utils/auth.server";
 import { HandledError, UnhandledError } from "~/components/error";
+import { useDebouncedFunction } from "../../../utils/useDebouncedFunction";
 
 const saveNameSchema = z.object({
   name: z.string().min(1, "Name cannot be blank"),
@@ -229,32 +230,41 @@ const RecipeDetail = () => {
   const saveTotalTimeFetcher = useFetcher<typeof action>();
   const saveInstructionsFetcher = useFetcher<typeof action>();
 
-  const saveName = (name: string) =>
-    saveNameFetcher.submit(
-      {
-        _action: "saveName",
-        name,
-      },
-      { method: "post" }
-    );
+  const saveName = useDebouncedFunction(
+    (name: string) =>
+      saveNameFetcher.submit(
+        {
+          _action: "saveName",
+          name,
+        },
+        { method: "post" }
+      ),
+    1000
+  );
 
-  const saveTotalTime = (totalTime: string) =>
-    saveTotalTimeFetcher.submit(
-      {
-        _action: "saveTotalTime",
-        totalTime,
-      },
-      { method: "post" }
-    );
+  const saveTotalTime = useDebouncedFunction(
+    (totalTime: string) =>
+      saveTotalTimeFetcher.submit(
+        {
+          _action: "saveTotalTime",
+          totalTime,
+        },
+        { method: "post" }
+      ),
+    1000
+  );
 
-  const saveInstructions = (instructions: string) =>
-    saveInstructionsFetcher.submit(
-      {
-        _action: "saveInstructions",
-        instructions,
-      },
-      { method: "post" }
-    );
+  const saveInstructions = useDebouncedFunction(
+    (instructions: string) =>
+      saveInstructionsFetcher.submit(
+        {
+          _action: "saveInstructions",
+          instructions,
+        },
+        { method: "post" }
+      ),
+    1000
+  );
 
   return (
     <Form method="post">
