@@ -315,38 +315,12 @@ const RecipeDetail = () => {
         <h2 className="font-bold text-sm pb-1">Name</h2>
         <div />
         {data.recipe?.ingredients.map((ingredient, i) => (
-          <Fragment key={ingredient.id}>
-            <input type="hidden" name="ingredientIds[]" value={ingredient.id} />
-            <div>
-              <Input
-                variant="bottom-border"
-                type="text"
-                autoComplete="off"
-                name="ingredientAmounts[]"
-                defaultValue={ingredient.amount ?? ""}
-                error={!!actionData?.errors?.[`ingredientAmounts.${i}`]}
-              />
-              <FormError>
-                {actionData?.errors?.[`ingredientAmounts.${i}`]}
-              </FormError>
-            </div>
-            <div>
-              <Input
-                variant="bottom-border"
-                type="text"
-                autoComplete="off"
-                name="ingredientNames[]"
-                defaultValue={ingredient.name}
-                error={!!actionData?.errors?.[`ingredientNames.${i}`]}
-              />
-              <FormError>
-                {actionData?.errors?.[`ingredientNames.${i}`]}
-              </FormError>
-            </div>
-            <button name="_action" value={`deleteIngredient.${ingredient.id}`}>
-              <DeleteIcon />
-            </button>
-          </Fragment>
+          <IngredientRow
+            key={ingredient.id}
+            ingredient={ingredient}
+            amountError={actionData?.errors?.[`ingredientAmounts.${i}`]}
+            nameError={actionData?.errors?.[`ingredientNames.${i}`]}
+          />
         ))}
         <div>
           <Input
@@ -410,6 +384,83 @@ const RecipeDetail = () => {
         </Button>
       </div>
     </Form>
+  );
+};
+
+interface IngredientRowProps {
+  ingredient: {
+    id: string;
+    amount: string | null;
+    name: string;
+  };
+  amountError?: string;
+  nameError?: string;
+}
+
+const IngredientRow = ({
+  ingredient,
+  amountError,
+  nameError,
+}: IngredientRowProps) => {
+  const saveIngredientAmountFetcher = useFetcher<typeof action>();
+  const saveIngredientNameFetcher = useFetcher<typeof action>();
+
+  const saveIngredientAmount = useDebouncedFunction((amount: string) => {
+    saveIngredientAmountFetcher.submit(
+      {
+        _action: "saveIngredientAmount",
+        id: ingredient.id,
+        amount,
+      },
+      { method: "post" }
+    );
+  }, 1000);
+
+  const saveIngredientName = useDebouncedFunction((name: string) => {
+    saveIngredientNameFetcher.submit(
+      {
+        _action: "saveIngredientName",
+        id: ingredient.id,
+        name,
+      },
+      { method: "post" }
+    );
+  }, 1000);
+
+  const amountFetcherError = saveIngredientAmountFetcher?.data?.errors?.amount;
+  const nameFetcherError = saveIngredientNameFetcher?.data?.errors?.name;
+
+  return (
+    <Fragment>
+      <input type="hidden" name="ingredientIds[]" value={ingredient.id} />
+      <div>
+        <Input
+          variant="bottom-border"
+          type="text"
+          autoComplete="off"
+          name="ingredientAmounts[]"
+          defaultValue={ingredient.amount ?? ""}
+          error={!!(amountError ?? amountFetcherError)}
+          onChange={(e) => saveIngredientAmount(e.target.value)}
+        />
+        <FormError>{amountFetcherError ?? amountError}</FormError>
+      </div>
+      <div>
+        <Input
+          variant="bottom-border"
+          type="text"
+          autoComplete="off"
+          name="ingredientNames[]"
+          defaultValue={ingredient.name}
+          error={!!(nameError ?? nameFetcherError)}
+          onChange={(e) => saveIngredientName(e.target.value)}
+        />
+        <FormError>{nameFetcherError ?? nameError}</FormError>
+      </div>
+      <button name="_action" value={`deleteIngredient.${ingredient.id}`}>
+        <DeleteIcon />
+      </button>
+    </Fragment>
   );
 };
 
