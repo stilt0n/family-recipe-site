@@ -1,4 +1,4 @@
-import { InputHTMLAttributes } from "react";
+import { InputHTMLAttributes, forwardRef } from "react";
 import cn from "classnames";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -11,14 +11,14 @@ const variantStyles: { [key: string]: string } = {
   "bottom-border": "border-b-2 border-b-background",
 };
 
-export const Input = ({
-  className,
-  variant = "primary",
-  ...props
-}: InputProps) => {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { className, variant = "primary", ...props },
+  ref
+) {
   return (
     <input
       {...props}
+      ref={ref}
       className={cn(
         "w-full outline-none focus:border-primary",
         variantStyles[variant],
@@ -27,4 +27,4 @@ export const Input = ({
       )}
     />
   );
-};
+});

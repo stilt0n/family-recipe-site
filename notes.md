@@ -885,3 +885,7 @@ Now when we check the magic link we can confirm the nonce matches the nonce
 that the user has stored in their cookies.
 
 For our setup we'll just be reusing the session cookie for this.
+
+### More on browser default form behavior
+
+Inside of a browser form input, when you hit enter, the browser will submit the entire form. To do this, the browser uses the _first_ button it encounters in the input, which is a problem for form setups with multiple submit buttons.

@@ -1,6 +1,6 @@
 // When a route needs to have a dynamic name, you can name the route file starting with a dollar sign
 
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import cn from "classnames";
 import {
   LoaderFunctionArgs,
@@ -227,6 +227,7 @@ export const action: ActionFunction = async ({ request, params }) => {
 const RecipeDetail = () => {
   const [ingredientName, setIngredientName] = useState("");
   const [ingredientAmount, setIngredientAmount] = useState("");
+  const newIngredientAmountRef = useRef<HTMLInputElement>(null);
   const data = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const saveNameFetcher = useFetcher<typeof action>();
@@ -276,23 +277,26 @@ const RecipeDetail = () => {
     1000
   );
 
-  const createIngredient = (
-    newIngredientAmount: string | null,
-    newIngredientName: string
-  ) => {
-    addIngredient(newIngredientAmount, newIngredientName);
+  const createIngredient = () => {
+    addIngredient(ingredientAmount, ingredientName);
     createIngredientFetcher.submit(
       {
         _action: "createIngredient",
-        newIngredientAmount,
-        newIngredientName,
+        newIngredientAmount: ingredientAmount,
+        newIngredientName: ingredientName,
       },
       { method: "post" }
     );
+    setIngredientAmount("");
+    setIngredientName("");
+    newIngredientAmountRef.current?.focus();
   };
 
   return (
     <Form method="post">
+      {/* Default browser form behavior is to use the first button on submit via enter button.
+      This is a bit of a hack that allows us to control what the enter button does within the form. */}
+      <button name="_action" value="saveRecipe" className="hidden" />
       <div className="mb-2">
         <Input
           key={data.recipe?.id}
@@ -349,6 +353,7 @@ const RecipeDetail = () => {
         ))}
         <div>
           <Input
+            ref={newIngredientAmountRef}
             variant="bottom-border"
             type="text"
             autoComplete="off"
@@ -362,6 +367,12 @@ const RecipeDetail = () => {
             }
             value={ingredientAmount}
             onChange={(e) => setIngredientAmount(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                createIngredient();
+              }
+            }}
           />
           <FormError>
             {createIngredientFetcher?.data?.errors?.newIngredientAmount ??
@@ -383,6 +394,12 @@ const RecipeDetail = () => {
             }
             value={ingredientName}
             onChange={(e) => setIngredientName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                createIngredient();
+              }
+            }}
           />
           <FormError>
             {createIngredientFetcher?.data?.errors?.newIngredientName ??
@@ -394,9 +411,7 @@ const RecipeDetail = () => {
           value="createIngredient"
           onClick={(e) => {
             e.preventDefault();
-            createIngredient(ingredientAmount, ingredientName);
-            setIngredientName("");
-            setIngredientAmount("");
+            createIngredient();
           }}
         >
           <SaveIcon />
