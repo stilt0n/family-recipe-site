@@ -469,6 +469,7 @@ const IngredientRow = ({
 }: IngredientRowProps) => {
   const saveIngredientAmountFetcher = useFetcher<typeof action>();
   const saveIngredientNameFetcher = useFetcher<typeof action>();
+  const deleteIngredientFetcher = useFetcher<typeof action>();
 
   const saveIngredientAmount = useDebouncedFunction((amount: string) => {
     saveIngredientAmountFetcher.submit(
@@ -495,7 +496,7 @@ const IngredientRow = ({
   const amountFetcherError = saveIngredientAmountFetcher?.data?.errors?.amount;
   const nameFetcherError = saveIngredientNameFetcher?.data?.errors?.name;
 
-  return (
+  return deleteIngredientFetcher.state === "idle" ? (
     <Fragment>
       <input type="hidden" name="ingredientIds[]" value={ingredient.id} />
       <div>
@@ -524,11 +525,23 @@ const IngredientRow = ({
         />
         <FormError>{nameFetcherError ?? nameError}</FormError>
       </div>
-      <button name="_action" value={`deleteIngredient.${ingredient.id}`}>
+      <button
+        name="_action"
+        value={`deleteIngredient.${ingredient.id}`}
+        onClick={(e) => {
+          e.preventDefault();
+          deleteIngredientFetcher.submit(
+            {
+              _action: `deleteIngredient.${ingredient.id}`,
+            },
+            { method: "post" }
+          );
+        }}
+      >
         <DeleteIcon />
       </button>
     </Fragment>
-  );
+  ) : null;
 };
 
 interface RenderedIngredient {
