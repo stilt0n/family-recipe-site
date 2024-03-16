@@ -1,6 +1,6 @@
 // When a route needs to have a dynamic name, you can name the route file starting with a dollar sign
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import cn from "classnames";
 import {
   LoaderFunctionArgs,
@@ -26,7 +26,8 @@ import { sendErrors, validateForm } from "~/utils/validation";
 import { handleDelete } from "~/models/utils";
 import { requireLoggedInUser } from "~/utils/auth.server";
 import { HandledError, UnhandledError } from "~/components/error";
-import { useDebouncedFunction } from "../../../utils/useDebouncedFunction";
+import { useDebouncedFunction } from "~/utils/useDebouncedFunction";
+import { useServerLayoutEffect } from "~/utils/misc";
 
 const saveNameSchema = z.object({
   name: z.string().min(1, "Name cannot be blank"),
@@ -224,11 +225,18 @@ export const action: ActionFunction = async ({ request, params }) => {
 };
 
 const RecipeDetail = () => {
+  const [ingredientName, setIngredientName] = useState("");
+  const [ingredientAmount, setIngredientAmount] = useState("");
   const data = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const saveNameFetcher = useFetcher<typeof action>();
   const saveTotalTimeFetcher = useFetcher<typeof action>();
   const saveInstructionsFetcher = useFetcher<typeof action>();
+  const createIngredientFetcher = useFetcher<typeof action>();
+  const { renderedIngredients, addIngredient } = useOptimisticIngredients(
+    data.recipe.ingredients,
+    createIngredientFetcher.state
+  );
 
   const saveName = useDebouncedFunction(
     (name: string) =>
@@ -237,6 +245,8 @@ const RecipeDetail = () => {
           _action: "saveName",
           name,
         },
+        // use method post so that route action handles form
+        // loader would use 'get' here I believe
         { method: "post" }
       ),
     1000
@@ -265,6 +275,21 @@ const RecipeDetail = () => {
       ),
     1000
   );
+
+  const createIngredient = (
+    newIngredientAmount: string | null,
+    newIngredientName: string
+  ) => {
+    addIngredient(newIngredientAmount, newIngredientName);
+    createIngredientFetcher.submit(
+      {
+        _action: "createIngredient",
+        newIngredientAmount,
+        newIngredientName,
+      },
+      { method: "post" }
+    );
+  };
 
   return (
     <Form method="post">
@@ -314,7 +339,7 @@ const RecipeDetail = () => {
         <h2 className="font-bold text-sm pb-1">Amount</h2>
         <h2 className="font-bold text-sm pb-1">Name</h2>
         <div />
-        {data.recipe?.ingredients.map((ingredient, i) => (
+        {renderedIngredients.map((ingredient, i) => (
           <IngredientRow
             key={ingredient.id}
             ingredient={ingredient}
@@ -329,9 +354,19 @@ const RecipeDetail = () => {
             autoComplete="off"
             name="newIngredientAmount"
             className="border-b-gray-200"
-            error={!!actionData?.errors?.newIngredientAmount}
+            error={
+              !!(
+                createIngredientFetcher?.data?.errors?.newIngredientAmount ??
+                actionData?.errors?.newIngredientAmount
+              )
+            }
+            value={ingredientAmount}
+            onChange={(e) => setIngredientAmount(e.target.value)}
           />
-          <FormError>{actionData?.errors?.newIngredientAmount}</FormError>
+          <FormError>
+            {createIngredientFetcher?.data?.errors?.newIngredientAmount ??
+              actionData?.errors?.newIngredientAmount}
+          </FormError>
         </div>
         <div>
           <Input
@@ -340,11 +375,30 @@ const RecipeDetail = () => {
             autoComplete="off"
             name="newIngredientName"
             className="border-b-gray-200"
-            error={!!actionData?.errors?.newIngredientName}
+            error={
+              !!(
+                createIngredientFetcher?.data?.errors?.newIngredientName ??
+                actionData?.errors?.newIngredientName
+              )
+            }
+            value={ingredientName}
+            onChange={(e) => setIngredientName(e.target.value)}
           />
-          <FormError>{actionData?.errors?.newIngredientName}</FormError>
+          <FormError>
+            {createIngredientFetcher?.data?.errors?.newIngredientName ??
+              actionData?.errors?.newIngredientName}
+          </FormError>
         </div>
-        <button name="_action" value="createIngredient">
+        <button
+          name="_action"
+          value="createIngredient"
+          onClick={(e) => {
+            e.preventDefault();
+            createIngredient(ingredientAmount, ingredientName);
+            setIngredientName("");
+            setIngredientAmount("");
+          }}
+        >
           <SaveIcon />
         </button>
       </div>
@@ -388,11 +442,7 @@ const RecipeDetail = () => {
 };
 
 interface IngredientRowProps {
-  ingredient: {
-    id: string;
-    amount: string | null;
-    name: string;
-  };
+  ingredient: RenderedIngredient;
   amountError?: string;
   nameError?: string;
 }
@@ -441,6 +491,7 @@ const IngredientRow = ({
           name="ingredientAmounts[]"
           defaultValue={ingredient.amount ?? ""}
           error={!!(amountError ?? amountFetcherError)}
+          disabled={ingredient.isOptimistic}
           onChange={(e) => saveIngredientAmount(e.target.value)}
         />
         <FormError>{amountFetcherError ?? amountError}</FormError>
@@ -453,6 +504,7 @@ const IngredientRow = ({
           name="ingredientNames[]"
           defaultValue={ingredient.name}
           error={!!(nameError ?? nameFetcherError)}
+          disabled={ingredient.isOptimistic}
           onChange={(e) => saveIngredientName(e.target.value)}
         />
         <FormError>{nameFetcherError ?? nameError}</FormError>
@@ -462,6 +514,45 @@ const IngredientRow = ({
       </button>
     </Fragment>
   );
+};
+
+interface RenderedIngredient {
+  id: string;
+  name: string;
+  amount: string | null;
+  isOptimistic?: boolean;
+}
+
+const useOptimisticIngredients = (
+  savedIngredients: RenderedIngredient[],
+  createIngredientState: "idle" | "submitting" | "loading"
+) => {
+  const [optimisticIngredients, setOptimisticIngredients] = useState<
+    RenderedIngredient[]
+  >([]);
+  const renderedIngredients = [...savedIngredients, ...optimisticIngredients];
+
+  // we want useLayoutEffect here because useEffect gets called *after* the UI
+  // is rendered to the screen, which means we'll get flickers when savedItems
+  // is updated.
+  useServerLayoutEffect(() => {
+    if (createIngredientState === "idle") {
+      setOptimisticIngredients([]);
+    }
+  }, [createIngredientState]);
+
+  const addIngredient = (amount: string | null, name: string) => {
+    setOptimisticIngredients((ingredients) => [
+      ...ingredients,
+      { name, id: createTemporaryId(), amount, isOptimistic: true },
+    ]);
+  };
+
+  return { renderedIngredients, addIngredient };
+};
+
+const createTemporaryId = () => {
+  return `tmp-${Math.round(Math.random() * 1000000)}`;
 };
 
 export const ErrorBoundary = () => {
