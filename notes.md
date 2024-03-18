@@ -889,3 +889,121 @@ For our setup we'll just be reusing the session cookie for this.
 ### More on browser default form behavior
 
 Inside of a browser form input, when you hit enter, the browser will submit the entire form. To do this, the browser uses the _first_ button it encounters in the input, which is a problem for form setups with multiple submit buttons.
+
+### Sending images in form uploads
+
+Browser will not automatically send images when user clicks save. When the file is sent with a form the form's post request will, by default, only send the file name.
+
+The requests tab shows something like this by default:
+
+```json
+{
+  "name": "someName",
+  "image": "img.jpg"
+}
+```
+
+But the default header for form data is:
+
+```json
+{
+  "Content-Type": "application/x-www-form-urlencoded"
+}
+```
+
+and the format for this data is a url query string:
+
+```
+name=someName&image=img.jpg
+```
+
+which is a string of key value pairs where the keys and values are separated by `=` and the pairs are separated by `&`.
+
+This format doesn't allow you to send binary or non-ascii data.
+
+To send a file, we need to change the `encType` attribute on the form.
+
+A good encoding type for forms that send files is `"multipart/form-data"`
+
+### Multipart form data format
+
+Multipart form data has parts separated by boundary value which looks like this in our case:
+
+```
+----------------<a bunch of numbers>
+```
+
+The only requirement for boundary is that it does not appear in any of the parts. Each part then has:
+
+```
+Content-Disposition: form-data; name="name"
+
+Chicken Alfredo
+<boundary>
+Content-Dispotion: form-data; name="totalTime"
+
+90 min
+<... etc>
+```
+
+For images we get:
+
+```
+Content-Disposition: form-data; name="image"; filename="img.JPG"
+Content-Type: image/jpeg
+
+<raw image data>
+```
+
+Then body ends with:
+
+```
+<boundary><two-dashes>
+```
+
+### Parsing multipart/form-data
+
+You can use `request.formData()` for this but it is inefficient because the request will read the entire image into memory. Images can be pretty large, so we might want to avoid this.
+
+It's better to stream this data and remix provides helper functions to do this.
+
+The API for this is unstable right now so this may change in the future.
+
+For now it is probably best to refer to the remix docs for handling formData rather than trying to memorize the specific unstable approach. It is just worth noting that remix has a solution for this. Currently the helper is called `unstable_parseMultipartFormData`.
+
+Remix also has some built in upload handlers for common use cases.
+
+```js
+// does same as request.formData() and reads into memory
+unstable_createMemoryUploadHandler();
+// file upload handler streams part data from request to file system
+// returns undefined if part is not a file part
+unstable_createFileUploadHandler();
+```
+
+To deal with multipart form data that has multiple types of content (e.g. files and text) then we can't just use on of these. When passing `uploadHanlder` to the `unstable_parseMultipartFormData` function remix will iterate over all the form data and omit things where `null` or `undefined` is returned. If we just use a fileUploadHandler, for example, we'll return undefined on all non-file data. So we can use `unstable_composeUploadHandlers` to handle multiple data types.
+
+e.g.
+
+```js
+const uploadHandler = unstable_composeUploadHandlers(
+  unstable_createFileUploadHandler(),
+  unstable_createMemoryUploadHandler()
+);
+```
+
+Compose upload handlers works by:
+
+- call first upload handler
+- if return null try next upload handler
+- keep going until one works or there are no more upload handlers to call
+
+By default the file upload handler will store images in a tempory directory on your OS.
+
+For our case we can store files in the `public` directory in a new folder called `images`.
+
+To get to this file, then we can visit:
+
+```
+<url>:<port>/images/<uploadedFileName>
+```

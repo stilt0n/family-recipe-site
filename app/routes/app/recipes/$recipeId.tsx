@@ -7,6 +7,10 @@ import {
   json,
   ActionFunction,
   redirect,
+  unstable_parseMultipartFormData,
+  unstable_composeUploadHandlers,
+  unstable_createFileUploadHandler,
+  unstable_createMemoryUploadHandler,
 } from "@remix-run/node";
 import {
   Form,
@@ -53,6 +57,7 @@ const saveIngredientNameSchema = z.object({
 
 const saveRecipeSchema = z
   .object({
+    imageUrl: z.string().optional(),
     ingredientIds: z
       .array(z.string().min(1, "Ingredient id is missing"))
       .optional(),
@@ -129,8 +134,20 @@ export const action: ActionFunction = async ({ request, params }) => {
       { status: 401 }
     );
   }
-
-  const formData = await request.formData();
+  let formData;
+  if (request.headers.get("Content-Type")?.includes("multipart/form-data")) {
+    const uploadHandler = unstable_composeUploadHandlers(
+      unstable_createFileUploadHandler({ directory: "public/images" }),
+      unstable_createMemoryUploadHandler()
+    );
+    formData = await unstable_parseMultipartFormData(request, uploadHandler);
+    const image = formData.get("image") as File;
+    if (image.size !== 0) {
+      formData.set("imageUrl", `/images/${image.name}`);
+    }
+  } else {
+    formData = await request.formData();
+  }
   const _action = formData.get("_action");
 
   if (typeof _action === "string" && _action.startsWith("deleteIngredient")) {
@@ -293,7 +310,7 @@ const RecipeDetail = () => {
   };
 
   return (
-    <Form method="post">
+    <Form method="post" encType="multipart/form-data">
       {/* Default browser form behavior is to use the first button on submit via enter button.
       This is a bit of a hack that allows us to control what the enter button does within the form. */}
       <button name="_action" value="saveRecipe" className="hidden" />
@@ -443,6 +460,18 @@ const RecipeDetail = () => {
         {saveInstructionsFetcher?.data?.errors?.instructions ||
           actionData?.errors?.instructions}
       </FormError>
+      <label
+        htmlFor="image"
+        className="block font-bold text-sm pb-2 w-fit mt-4"
+      >
+        Image
+      </label>
+      <input
+        id="image"
+        type="file"
+        name="image"
+        key={`${data.recipe?.id}.image`}
+      />
       <hr className="my-4" />
       <div className="flex justify-between">
         <Button variant="delete" name="_action" value="deleteRecipe">
